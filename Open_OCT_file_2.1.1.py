@@ -428,9 +428,9 @@ def location_input_dialog_box():
     checkbox_radials = []
     entry_horizontals = []
     entry_verticals = []
-    subfolder_var = []
     subfolder_vars = []
     checkbox_subfolders = []
+
 
     # Adding  labels at the top of the columns
     label_location = tk.Label(dialog_frame, text="location")
@@ -509,6 +509,23 @@ def location_input_dialog_box():
     min_contrast_entry.pack(side="left")
     max_contrast_entry.pack(side="right")
 
+    # Getting user input on cropping
+    crop_boolean = True
+    crop_amount = "480"
+    crop_checkbox_var = tk.BooleanVar(value=crop_boolean)
+    crop_checkbox = tk.Checkbutton(window, text="Vertically crop the images around retina", variable=crop_checkbox_var)
+    crop_checkbox.grid(padx=10, sticky='w')
+    crop_amount_frame = tk.Frame(window)
+    crop_amount_frame.grid(row=row_num+7, column=0, sticky='w', padx=10)
+    crop_amount_var = tk.StringVar()
+    crop_amount_var.set(crop_amount)
+    crop_amount_label = tk.Label(crop_amount_frame)
+    crop_amount_label.pack(side='left')
+    crop_amount_entry = tk.Entry(crop_amount_frame, textvariable=crop_amount_var, width=6)
+    
+
+
+    # Creating "Restore defaults" and "Confirm" buttons at the bottom of the screen
     button_frame = tk.Frame(window)
     button_frame.grid()
     restore_button = tk.Button(button_frame, text="Restore defaults", command=restore_defaults)

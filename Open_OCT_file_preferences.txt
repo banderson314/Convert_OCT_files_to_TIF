@@ -1,0 +1,11 @@
+
+image_location_list = ['central', 'temporal', 'nasal', 'superior', 'inferior']
+od_before_os = True
+scan_modes = ['radial', 'linear', 'linear', 'radial', 'radial']
+subfolder_entry = [False, True, True, True, True]
+subfolder_name = Peripheral images
+horizontal_image_list = ['horizontal', '', '', '', '']
+vertical_image_list = ['vertical', '', '', 'superior', 'inferior']
+unaveraged_images = False
+min_contrast = 25
+max_contrast = 215
