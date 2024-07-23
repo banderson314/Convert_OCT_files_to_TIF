@@ -1,11 +1,14 @@
 
-image_location_list = ['central', 'temporal', 'nasal', 'superior', 'inferior']
+imagej_location = U:/ImageJ/ImageJ/ImageJ.exe
+screenshot_directory = U:/Programming/GitHub repositories/process_OCT_files/ImageJ_clicking_files
+macro_location = U:/Programming/GitHub repositories/process_OCT_files/Open_OCT_file_imagej_supplement_1.2.ijm
+image_location_list = ['central', 'superior']
 od_before_os = True
-scan_modes = ['radial', 'linear', 'linear', 'radial', 'radial']
-subfolder_entry = [False, True, True, True, True]
+scan_modes = ['radial', 'radial']
+subfolder_entry = [False, False]
 subfolder_name = Peripheral images
-horizontal_image_list = ['horizontal', '', '', '', '']
-vertical_image_list = ['vertical', '', '', 'superior', 'inferior']
+horizontal_image_list = ['horizontal', '']
+vertical_image_list = ['vertical', 'superior']
 unaveraged_images = False
 min_contrast = 25
 max_contrast = 215

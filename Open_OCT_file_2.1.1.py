@@ -71,7 +71,7 @@ def wait_to_appear(image_file, max_wait_time):      # This looks for dialog boxe
     return False
 
 
-def center_dialog_box(window):
+def center_dialog_box(window):      # Moves the dialog box to the center of the screen
     window.update_idletasks()
     width = window.winfo_width()
     height = window.winfo_height()
@@ -291,6 +291,9 @@ def location_input_dialog_box():
         default_radial_or_linear = ["radial", "linear", "linear", "radial", "radial"]
         default_vertical = ["vertical", "", "", "superior", "inferior"]
         default_subfolder = [False, True, True, True, True]
+        default_min_contrast = 25
+        default_max_contrast = 215
+        default_subfolder_name = "Peripheral images"
         current_row_count = len(entry_rows)
 
         # If the current number of rows is less than five, add new rows
@@ -353,12 +356,12 @@ def location_input_dialog_box():
 
         # Update: change peripheral folder checkbox to entry box - change the below to a report on number of subfolders to be made
         subfolder_name_entry.delete(0, tk.END)
-        subfolder_name_entry.insert(0, "Peripheral images")
+        subfolder_name_entry.insert(0, default_subfolder_name)
 
         min_contrast_entry.delete(0, tk.END)
-        min_contrast_entry.insert(0, str(25))
+        min_contrast_entry.insert(0, str(default_min_contrast))
         max_contrast_entry.delete(0, tk.END)
-        max_contrast_entry.insert(0, str(215))
+        max_contrast_entry.insert(0, str(default_max_contrast))
 
 
     def confirm(event=None):
