@@ -22,6 +22,16 @@ import inspect      # For error messages
 # You will need to make sure to download psutil, pyautogui, and pygetwindow as they don't come with base Python
 
 
+# For updates, look for # Update:
+# Update: volume scan
+# Update: grey out horizontal and vertical boxes unless radial is selected
+# Update: change peripheral folder checkbox to entry box
+# Update: custom defaults 
+# Update: extra options dialog box
+
+# If update done, then it is finished with a "- done"
+
+
 # Defining the location of the Open_OCT_file_preferences.txt
 script_directory = os.path.dirname(os.path.abspath(__file__))
 preference_file_name = "Open_OCT_file_preferences.txt"
@@ -146,6 +156,7 @@ def retrieve_variables(preferences_variables, key):
             return "25"
         elif key == "max_contrast":
             return "215"
+        # Update: volume scan
 
 
 image_location_list = retrieve_variables(preferences_variables, 'image_location_list')
@@ -158,6 +169,7 @@ vertical_image_list = retrieve_variables(preferences_variables, 'vertical_image_
 unaveraged_images = retrieve_variables(preferences_variables, 'unaveraged_images')
 min_contrast = retrieve_variables(preferences_variables, 'min_contrast')
 max_contrast = retrieve_variables(preferences_variables, 'max_contrast')
+# Update: volume scan
 
 
 # Converting str to whatever it actually is, since only strings come from the txt file
@@ -175,6 +187,7 @@ if type(horizontal_image_list) == str:
     horizontal_image_list = eval(horizontal_image_list)
 if type(vertical_image_list) == str:
     vertical_image_list = eval(vertical_image_list)
+# Update: volume scan
 
 
 
@@ -192,6 +205,7 @@ def location_input_dialog_box():
         radial_var = tk.BooleanVar(value=(mode == "radial"))
         linear_vars.append(linear_var)
         radial_vars.append(radial_var)
+        # Update: volume scan
 
         checkbox_linear = tk.Checkbutton(dialog_frame, variable=linear_var, command=lambda i=len(linear_vars)-1: select_linear(i))
         checkbox_linear.grid(row=row_num, column=1, sticky='s')
@@ -200,6 +214,8 @@ def location_input_dialog_box():
         checkbox_radial = tk.Checkbutton(dialog_frame, variable=radial_var, command=lambda i=len(radial_vars)-1: select_radial(i))
         checkbox_radial.grid(row=row_num, column=2, sticky='s')
         checkbox_radials.append(checkbox_radial)
+
+        # Update: volume scan - checkbox_volume
 
 
         # Adding the horizontal and vertical entry boxes
@@ -210,6 +226,7 @@ def location_input_dialog_box():
         entry_vertical = tk.Entry(dialog_frame)
         entry_vertical.grid(row=row_num, column=4, sticky='w')
         entry_verticals.append(entry_vertical)
+        # Update: grey out horizontal and vertical boxes unless radial is selected
 
         # Adding subfolder checkboxes
         subfolder_var = tk.BooleanVar(value=subfolder_mode)
@@ -217,11 +234,13 @@ def location_input_dialog_box():
         checkbox_subfolder.grid(row=row_num, column=5, sticky='s')
         checkbox_subfolders.append(checkbox_subfolder)
         subfolder_vars.append(subfolder_var)
+        # Update: change peripheral folder checkbox to entry box
 
         row_num += 1
 
     def remove_entry_row():
         if entry_rows:
+            # Update: volume scan - not sure what to get rid of, but we need to get rid of something
             entry_row = entry_rows.pop()
             entry_row.destroy()
 
@@ -247,14 +266,26 @@ def location_input_dialog_box():
 
 
     def select_linear(index):
+        # Update: volume scan - done?
         linear_vars[index].set(True)
         radial_vars[index].set(False)
+        volume_vars[index].set(False)
 
     def select_radial(index):
+        # Update: volume scan - done?
         linear_vars[index].set(False)
         radial_vars[index].set(True)
+        volume_vars[index].set(False)
+
+    def select_volume(index):
+        # Update: volume scan - add something to call this function
+        linear_vars[index].set(False)
+        radial_vars[index].set(False)
+        volume_vars[index].set(True)
 
     def restore_defaults():
+        # Update: custom defaults - need to define at function that sees user settings
+        # Update: volume scan - add default volume scan
         default_values = ["central", "temporal", "nasal", "superior", "inferior"]
         default_horizontal = ["horizontal", "", "", "", ""]
         default_radial_or_linear = ["radial", "linear", "linear", "radial", "radial"]
@@ -280,25 +311,35 @@ def location_input_dialog_box():
 
         # Set the checkboxes in the second and third columns based on default
         for i, mode in enumerate(default_radial_or_linear):
+            # Update: volume scan - done?
             if mode == "radial":
                 linear_vars[i].set(False)
                 radial_vars[i].set(True)
-            else:  # Assuming "linear" as the other mode
+                volume_vars[i].set(False)
+            elif mode == "linear":
                 linear_vars[i].set(True)
                 radial_vars[i].set(False)
+                volume_vars[i].set(False)
+            elif mode == "volume": 
+                linear_vars[i].set(False)
+                radial_vars[i].set(False)
+                volume_vars[i].set(True)
 
         # Set the horizontal and vertical entry boxes with default values
         for i, default_value in enumerate(default_horizontal):
+            # Update: grey out horizontal and vertical boxes unless radial is selected - update needed?
             entry_horizontal = entry_horizontals[i]
             entry_horizontal.delete(0, tk.END)
             entry_horizontal.insert(tk.END, default_value)
 
         for i, default_value in enumerate(default_vertical):
+            # Update: grey out horizontal and vertical boxes unless radial is selected - update needed?
             entry_vertical = entry_verticals[i]
             entry_vertical.delete(0, tk.END)
             entry_vertical.insert(tk.END, default_value)
 
         # Set the checkboxes in the fifth column based on default
+        # Update: change peripheral folder checkbox to entry box
         for i, default_value in enumerate(default_subfolder):
             if default_value == True:
                 subfolder_vars[i].set(True)
@@ -307,8 +348,10 @@ def location_input_dialog_box():
 
         od_os_checkbox_var.set(True)
         imagej_checkbox_var.set(False)
+        # Update: extra options dialog box - move this checkbox to an option elsewhere
         unaveraged_checkbox_var.set(False)
 
+        # Update: change peripheral folder checkbox to entry box - change the below to a report on number of subfolders to be made
         subfolder_name_entry.delete(0, tk.END)
         subfolder_name_entry.insert(0, "Peripheral images")
 
@@ -319,6 +362,7 @@ def location_input_dialog_box():
 
 
     def confirm(event=None):
+        # Update: volume scan - add variable
         global image_location_list, od_before_os, scan_modes, subfolder_entry, subfolder_name, horizontal_image_list, vertical_image_list, unaveraged_images, min_contrast, max_contrast
 
         image_location_list = []
@@ -326,6 +370,7 @@ def location_input_dialog_box():
         subfolder_entry = []
         horizontal_image_list = []
         vertical_image_list = []
+        # Update: volume scan
 
         for i, entry_row in enumerate(entry_rows):
             text = entry_row.get()
@@ -336,13 +381,16 @@ def location_input_dialog_box():
                 scan_modes.append("linear")
             elif radial_vars[i].get():
                 scan_modes.append("radial")
+            # Update: volume scan
             else:
                 scan_modes.append("")
 
             subfolder_entry.append(subfolder_vars[i].get())
+            # Update: change peripheral folder checkbox to entry box
 
         for i, entry_horizontal in enumerate(entry_horizontals):
             text = entry_horizontal.get()
+            # Update: grey out horizontal and vertical boxes unless radial is selected - update needed?
             if text:
                 horizontal_image_list.append(text)
             else:
@@ -350,6 +398,7 @@ def location_input_dialog_box():
 
         for i, entry_vertical in enumerate(entry_verticals):
             text = entry_vertical.get()
+            # Update: grey out horizontal and vertical boxes unless radial is selected - update needed?
             if text:
                 vertical_image_list.append(text)
             else:
