@@ -28,6 +28,9 @@ import inspect      # For error messages
 # Update: change peripheral folder checkbox to entry box
 # Update: custom defaults 
 # Update: extra options dialog box
+# Update: custom cropping
+# Update: other
+# Update: handle multiple experiments from one date
 
 # If update done, then it is finished with a "- done"
 
@@ -408,7 +411,9 @@ def location_input_dialog_box():
                 vertical_image_list.append("")
 
         od_before_os = od_os_checkbox_var.get()
+        # Update: extra options dialog box - change line:
         imageJ_location_reenter = imagej_checkbox_var.get()
+        # Update: change peripheral folder checkbox to entry box:
         subfolder_name = subfolder_name_entry.get()
         unaveraged_images = unaveraged_checkbox_var.get()
         min_contrast = min_contrast_var.get()
@@ -428,6 +433,7 @@ def location_input_dialog_box():
             "scan_modes",
             "subfolder_entry",
             "subfolder_name",
+            # Update: grey out horizontal and vertical boxes unless radial is selected - needed?
             "horizontal_image_list",
             "vertical_image_list",
             "unaveraged_images",
@@ -436,6 +442,7 @@ def location_input_dialog_box():
         ]
         lines = [line for line in file_content.splitlines() if not any(line.startswith(variable) for variable in variables_to_replace)]
         if imageJ_location_reenter == True:
+            # Update: extra options dialog box - probably move this to wherever it is
             shortened_lines = []
             for i in lines:
                 if not (i.startswith("screenshot_directory") or i.startswith("macro_location") or i.startswith("imagej_location")):
@@ -448,6 +455,7 @@ def location_input_dialog_box():
             file.write(f"\nimage_location_list = {image_location_list}")
             file.write(f"\nod_before_os = {od_before_os}")
             file.write(f"\nscan_modes = {scan_modes}")
+            # Update: change peripheral folder checkbox to entry box - next two lines
             file.write(f"\nsubfolder_entry = {subfolder_entry}")
             file.write(f"\nsubfolder_name = {subfolder_name}")
             file.write(f"\nhorizontal_image_list = {horizontal_image_list}")
@@ -457,7 +465,7 @@ def location_input_dialog_box():
             file.write(f"\nmax_contrast = {max_contrast}")
 
 
-    def onDialogClose3(event=None):
+    def onDialogClose(event=None):
         window.master.destroy()
         exit()
 
@@ -465,7 +473,7 @@ def location_input_dialog_box():
 
     window = tk.Toplevel()
     window.title("Image settings")
-    window.protocol("WM_DELETE_WINDOW", onDialogClose3)
+    window.protocol("WM_DELETE_WINDOW", onDialogClose)
 
     instructions_label = tk.Label(window, text="Please enter the order that the images were taken in and what scan mode was used. If radial\nscans were used, record what the horizontal and vertical images represent. If this is not\nprovided for the radial images, then the image will not be processed. These will be used for the\nfile name.", justify='left')
     instructions_label.grid(padx=10, sticky='w')
@@ -474,10 +482,13 @@ def location_input_dialog_box():
     dialog_frame.grid(padx=10, pady=10)
 
     entry_rows = []
+    # Update: volume scan - make sure addition of volume_vars and checkbox_volumes works
     linear_vars = []
     radial_vars = []
+    volume_vars = []
     checkbox_linears = []
     checkbox_radials = []
+    checkbox_volumes = []
     entry_horizontals = []
     entry_verticals = []
     subfolder_vars = []
@@ -491,18 +502,23 @@ def location_input_dialog_box():
     label_linear.grid(row=0, column=1)
     label_radial = tk.Label(dialog_frame, text="radial")
     label_radial.grid(row=0, column=2)
+    # Update: volume scan - done; added volume label
+    label_volume = tk.Label(dialog_frame, text="volume")
+    label_volume.grid(row=0, column=3)
     label_horizontal = tk.Label(dialog_frame, text="horizontal")
-    label_horizontal.grid(row=0, column=3, sticky='s')
+    label_horizontal.grid(row=0, column=4, sticky='s')
     label_vertical = tk.Label(dialog_frame, text="vertical")
-    label_vertical.grid(row=0, column=4, sticky='s')
+    label_vertical.grid(row=0, column=5, sticky='s')
     label_subfolder = tk.Label(dialog_frame, text="subfolder")
-    label_subfolder.grid(row=0, column=5)
+    label_subfolder.grid(row=0, column=6)
 
 
 
     # Adding existing entry rows with their corresponding checkboxes
     for i, location in enumerate(image_location_list):
+        # Update: volume scan - not sure whta you do here, but you need to do something
         mode = scan_modes[i] if scan_modes and i < len(scan_modes) else "linear"
+        # Update: change peripheral folder checkbox to entry box - this is making a checkbox
         subfolder_mode = subfolder_entry[i] if subfolder_entry and i < len(subfolder_entry) else False
         add_entry_row(mode, subfolder_mode)
         entry_row = entry_rows[-1]
@@ -528,6 +544,7 @@ def location_input_dialog_box():
     od_os_checkbox = tk.Checkbutton(window, text="OD eyes were imaged before OS eyes", variable=od_os_checkbox_var)
     od_os_checkbox.grid(padx=10, sticky='w')
 
+    # Update: custom defaults - make this part of a separate dialog box (or honestly make it a button)
     imagej_checkbox_var = tk.BooleanVar(value=False)
     imagej_checkbox = tk.Checkbutton(window, text="Re-enter ImageJ file location", variable=imagej_checkbox_var)
     imagej_checkbox.grid(padx=10, sticky='w')
@@ -537,6 +554,7 @@ def location_input_dialog_box():
     unaveraged_checkbox.grid(padx=10, sticky='w')
 
     # Getting user input on subfolder name
+    # Update: change peripheral folder checkbox to entry box - replace with text that says how many subfolders will be made
     subfolder_frame = tk.Frame(window)
     subfolder_frame.grid(row=row_num+5, column=0, sticky='w', padx=10)  # Align to the left
     subfolder_name_var = tk.StringVar()
@@ -562,10 +580,12 @@ def location_input_dialog_box():
     max_contrast_entry.pack(side="right")
 
     # Getting user input on cropping
+    # Update: custom cropping - make sure this works 
     crop_boolean = True
-    crop_amount = "480"
+    crop_amount = "480" # Update: custom cropping - make this a variable that is saved (i.e. don't have it defined here)
     crop_checkbox_var = tk.BooleanVar(value=crop_boolean)
     crop_checkbox = tk.Checkbutton(window, text="Vertically crop the images around retina", variable=crop_checkbox_var)
+    # Update: custom cropping - maybe make this a button "No cropping" next to it which changes the crop amount to whatever the full amount it
     crop_checkbox.grid(padx=10, sticky='w')
     crop_amount_frame = tk.Frame(window)
     crop_amount_frame.grid(row=row_num+7, column=0, sticky='w', padx=10)
@@ -578,6 +598,7 @@ def location_input_dialog_box():
 
 
     # Creating "Restore defaults" and "Confirm" buttons at the bottom of the screen
+    # Update: custom defaults - include button "Options"
     button_frame = tk.Frame(window)
     button_frame.grid()
     restore_button = tk.Button(button_frame, text="Restore defaults", command=restore_defaults)
@@ -586,7 +607,7 @@ def location_input_dialog_box():
     confirm_button.pack(side='right', pady=10, padx=10)
 
 
-    window.bind("<Escape>", onDialogClose3)
+    window.bind("<Escape>", onDialogClose)
     window.bind("<Return>", confirm)
 
     window.master.attributes("-alpha", 0)  # Set window opacity to 0 to make it invisible
@@ -595,6 +616,7 @@ def location_input_dialog_box():
 
     # Center the window on the screen
     window.after(10, lambda: center_dialog_box(window))
+    # Update: other. Do we have to have this delayed? ^
 
     window.mainloop()
 
@@ -606,6 +628,7 @@ print("image_location_list:", image_location_list)
 print("od_before_os:", od_before_os)
 print("unaveraged_images:", unaveraged_images)
 print("scan_modes:", scan_modes)
+# Update: change peripheral folder checkbox to entry box - this should be a list, not a boolean
 print("subfolder_entry:", subfolder_entry)
 print("subfolder_name:", subfolder_name)
 print("horizontal_image_list:", horizontal_image_list)
@@ -624,6 +647,7 @@ for list in underscore_list:
 
 
 images_to_put_into_subfolder = []
+# Update: change peripheral folder checkbox to entry box - need to make a tuplet to include what subfolder to be in
 for i, image_type in enumerate(image_location_list):
     if subfolder_entry[i] is True:
         images_to_put_into_subfolder.append(image_type)
@@ -635,6 +659,7 @@ for i, image_type in enumerate(image_location_list):
 
 #SELECTING THE DIRECTORY
 # Create the Tkinter root window
+# Update: automatically select file directory
 root = tk.Tk()
 root.withdraw()  # Hide the root window
 
@@ -650,7 +675,7 @@ else:
 
 
 # Deleting all the directories previously made by this script if the user decides to run the script again in the same folder
-# This is mainly for me to test my script
+# This is mainly for development to test the script
 delete_directory(os.path.join(image_directory, "averaged_images"))
 delete_directory(os.path.join(image_directory, "cropped_tif_images"))
 delete_directory(os.path.join(image_directory, "images_to_be_averaged"))
@@ -678,6 +703,7 @@ fileNames = [file for file in os.listdir(image_directory) if os.path.isfile(os.p
 filteredFiles = [name for name in fileNames if name.endswith(".OCT") and "RegAvg" not in name and name.split("_")[2] != "V"]  #Removing any files that contain "RegAvg" and aren't .OCT and aren't volume scans
 
 #Checking to make sure all images are from the same date and experiment
+# Update: handle multiple experiments from one date
 experimentDate = filteredFiles[0].split("_")[0]
 for file_name in filteredFiles:
     if file_name.split("_")[0] != experimentDate:
