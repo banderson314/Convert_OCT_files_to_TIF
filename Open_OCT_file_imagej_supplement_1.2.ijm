@@ -70,6 +70,13 @@ macro "Crop TIF files [s]" {
 
   setBatchMode(true);
 
+  // Getting user input on how much cropping to do
+  settings_file = directory + "ImageJ_settings.txt"
+  settings_content = File.openAsString(settings_file)
+  settings = split(settings_content, "\n");
+  crop_amount = settings[0]
+  crop_amount = parseInt(crop_amount)
+
   // Define the path to the text file and create new directory
   initial_tif_directory = directory + File.separator + "initial_tif_images";
   cropped_tif_images = directory + File.separator + "cropped_tif_images";
@@ -102,21 +109,25 @@ macro "Crop TIF files [s]" {
     Array.getStatistics(profile, min, max, mean, std);
     cutoff = 1.5*std + mean;
 
-    topIntensities = newArray();
+    top_intensities = newArray();
     for (j = 0; j < profile.length; j++) {
       if (profile[j] > cutoff) {
-        topIntensities = Array.concat(topIntensities, j);
+        top_intensities = Array.concat(top_intensities, j);
       }
     }
 
     //Finding the middle of the retina
-    middleNumber = topIntensities.length / 2;   //This gives the median value, which works better than the mean
-    middleOfRetina = topIntensities[middleNumber];
+    middle_number = top_intensities.length / 2;   //This gives the median value, which works better than the mean
+    middle_of_retina = top_intensities[middle_number];
 
 
     //Making the box around the retina
-    y = middleOfRetina - 250;
-    makeRectangle(0, y, 640, 480);
+    half_of_crop_amount = crop_amount / 2;
+    top_of_image = middle_of_retina - half_of_crop_amount - 10;
+    if (top_of_image < 0) {
+      top_of_image = 0;
+    }
+    makeRectangle(0, top_of_image, 640, crop_amount); // (x of upper left, y of upper left, width, height)
 
 
     //Cropping the file to just have the retina
@@ -175,11 +186,11 @@ macro "Enhancing contrast [f]" {
   averaged_directory = directory + File.separator + "averaged_images";
   averaged_images = getFileList(averaged_directory);
 
-  settings_file = directory + "ImageJ_contrast_settings.txt"
+  settings_file = directory + "ImageJ_settings.txt"
   settings_content = File.openAsString(settings_file)
   settings = split(settings_content, "\n");
-  min_contrast = settings[0]  //Recommend 25
-  max_contrast = settings[1]  //Recommend 215
+  min_contrast = settings[1]  //Recommend 25
+  max_contrast = settings[2]  //Recommend 215
 
   for (i = 0; i < averaged_images.length; i++) {
     open(averaged_directory + File.separator + averaged_images[i]);

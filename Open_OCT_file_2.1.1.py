@@ -26,7 +26,6 @@ import inspect      # For error messages
 # Update: change peripheral folder checkbox to entry box
 # Update: custom defaults 
 # Update: extra options dialog box
-# Update: custom cropping
 # Update: other
 # Update: handle multiple experiments from one date
 
@@ -159,8 +158,6 @@ def retrieve_variables(preferences_variables, key):
             return "25"
         elif key == "max_contrast":
             return "215"
-        elif key == "crop_boolean":
-            return True
         elif key == "crop_amount":
             return "480"
         
@@ -176,7 +173,6 @@ vertical_image_list = retrieve_variables(preferences_variables, 'vertical_image_
 unaveraged_images = retrieve_variables(preferences_variables, 'unaveraged_images')
 min_contrast = retrieve_variables(preferences_variables, 'min_contrast')
 max_contrast = retrieve_variables(preferences_variables, 'max_contrast')
-crop_boolean = retrieve_variables(preferences_variables, "crop_boolean")
 crop_amount = retrieve_variables(preferences_variables, "crop_amount")
 
 
@@ -195,8 +191,7 @@ if type(horizontal_image_list) == str:
     horizontal_image_list = eval(horizontal_image_list)
 if type(vertical_image_list) == str:
     vertical_image_list = eval(vertical_image_list)
-if type(crop_boolean) == str:
-    crop_boolean = eval(crop_boolean)
+
 
 
 
@@ -325,7 +320,6 @@ def location_input_dialog_box():
         default_subfolder = [False, True, True, True, True]
         default_min_contrast = 25   # Update: other - need to define this at beginning
         default_max_contrast = 215  # Update: other - need to define this at beginning
-        default_crop_boolean = True
         default_crop_amount = 480  # Update: other - need to define this at beginning
         default_subfolder_name = "Peripheral images"
         current_row_count = len(entry_rows)
@@ -388,16 +382,13 @@ def location_input_dialog_box():
         max_contrast_entry.delete(0, tk.END)
         max_contrast_entry.insert(0, str(default_max_contrast))
         
-        crop_checkbox_var.set(default_crop_boolean)
-        #crop_amount_entry.config(state='normal')
         crop_amount_entry.delete(0, tk.END)
         crop_amount_entry.insert(0, default_crop_amount)
 
 
     def confirm(event=None):
-        global image_location_list, od_before_os, scan_modes, subfolder_entry, subfolder_name, horizontal_image_list, vertical_image_list, unaveraged_images, min_contrast, max_contrast
-        global crop_boolean, crop_amount
-
+        global image_location_list, od_before_os, scan_modes, subfolder_entry, subfolder_name, horizontal_image_list, vertical_image_list, unaveraged_images, min_contrast, max_contrast, crop_amount
+        
         image_location_list = []
         scan_modes = []
         subfolder_entry = []
@@ -444,7 +435,6 @@ def location_input_dialog_box():
         min_contrast = min_contrast_var.get()
         max_contrast = max_contrast_var.get()
         crop_amount = crop_amount_var.get()
-        crop_boolean = crop_checkbox_var.get()
 
 
         window.destroy()
@@ -467,7 +457,6 @@ def location_input_dialog_box():
             "min_contrast",
             "max_contrast",
             "crop_amount",
-            "crop_boolean"
         ]
         lines = [line for line in file_content.splitlines() if not any(line.startswith(variable) for variable in variables_to_replace)]
         if imageJ_location_reenter == True:
@@ -493,7 +482,6 @@ def location_input_dialog_box():
             file.write(f"\nmin_contrast = {min_contrast}")
             file.write(f"\nmax_contrast = {max_contrast}")
             file.write(f"\ncrop_amount = {crop_amount}")
-            file.write(f"\ncrop_boolean = {crop_boolean}")
 
 
     def onDialogClose(event=None):
@@ -613,38 +601,18 @@ def location_input_dialog_box():
     row_num += 1
 
     # Getting user input on cropping
-    # Update: custom cropping - make sure this works 
     crop_amount_frame = tk.Frame(window)
     crop_amount_frame.grid(row=row_num, column=0, sticky='w', padx=10)
-    crop_checkbox_var = tk.BooleanVar(value=crop_boolean)
     crop_amount_var = tk.StringVar()
     crop_amount_var.set(crop_amount)
-    crop_checkbox = tk.Checkbutton(crop_amount_frame, text="Vertically crop the images around retina", variable=crop_checkbox_var)
-    crop_checkbox.grid(row=0, column=0, sticky='w')
+    crop_label = tk.Label(crop_amount_frame, text="Vertically crop around the retina (recommend: 480 max: 1577): ")
+    crop_label.grid(row=0, column=0)
     crop_amount_entry = tk.Entry(crop_amount_frame, textvariable=crop_amount_var, width=6)
     crop_amount_entry.grid(row=0, column=1)
     crop_unit_label = tk.Label(crop_amount_frame, text="µm")
     crop_unit_label.grid(row=0, column=2)
     row_num += 1
     
-    # Updating the cropping amount based on if the checkbox is selected or not
-    last_crop_amount = crop_amount
-    def update_entry_state(*args):
-        nonlocal last_crop_amount
-        # Enable or disable the entry widget based on the checkbox state
-        if crop_checkbox_var.get():
-            # Restore the previous value when enabling
-            crop_amount_entry.config(state='normal')
-            crop_amount_var.set(last_crop_amount)
-        else:
-            # Record the current value and clear the entry when disabling
-            last_crop_amount = crop_amount_var.get()
-            crop_amount_entry.delete(0, tk.END)
-            crop_amount_entry.config(state='disabled')
-    # Call the update_entry_state function when the checkbox state changes
-    crop_checkbox_var.trace_add('write', update_entry_state)
-    update_entry_state()
-
 
     # Creating "Restore defaults" and "Confirm" buttons at the bottom of the screen
     # Update: custom defaults - include button "Options"
@@ -684,7 +652,6 @@ print("horizontal_image_list:", horizontal_image_list)
 print("vertical_image_list:", vertical_image_list)
 print("min_contrast:", min_contrast)
 print("max_contrast:", max_contrast)
-print("crop_boolean:", crop_boolean)
 print("crop_amount:", crop_amount)
 
 
@@ -735,23 +702,22 @@ delete_directory(os.path.join(image_directory, "unaveraged_images"))
 annotated_text_file = os.path.join(image_directory, "Annotated_list_of_files.txt")
 if os.path.exists(annotated_text_file):
     os.remove(annotated_text_file)
-imagej_settings_file = os.path.join(image_directory, "ImageJ_contrast_settings.txt")
+imagej_settings_file = os.path.join(image_directory, "ImageJ_settings.txt")
 if os.path.exists(imagej_settings_file):
     os.remove(imagej_settings_file)
 
 
-# Saving the min and max values so that ImageJ can access them
+# Saving the crop, min and max values so that ImageJ can access them
 with open(imagej_settings_file, "w") as file:
-    file.write(str(min_contrast))
-    file.write("\n")
-    file.write(str(max_contrast))
+    file.write(f"{crop_amount}\n{min_contrast}\n{max_contrast}\n")
 
 
 #PUTTING FILE NAMES TOGETHER IN LIST
 # Retrieve all file names in the directory
 fileNames = [file for file in os.listdir(image_directory) if os.path.isfile(os.path.join(image_directory, file))]
 
-filteredFiles = [name for name in fileNames if name.endswith(".OCT") and "RegAvg" not in name and name.split("_")[2] != "V"]  #Removing any files that contain "RegAvg" and aren't .OCT and aren't volume scans
+# Update: volume scan - removed <and name.split("_")[2] != "V">
+filteredFiles = [name for name in fileNames if name.endswith(".OCT") and "RegAvg" not in name]  #Removing any files that contain "RegAvg" and aren't .OCT
 
 #Checking to make sure all images are from the same date and experiment
 # Update: handle multiple experiments from one date
@@ -1199,7 +1165,7 @@ wait_to_appear(os.path.join(screenshot_directory, "plugins_button.png"), 30)
 plugins_button_path = os.path.join(screenshot_directory, "plugins_button.png")
 click_on_image_center(plugins_button_path)
 
-# Simulate keyboard actions
+# Simulate keyboard actions to get to macro installation
 pyautogui.press('down')    # Press the down arrow key
 pyautogui.press('right')   # Press the right arrow key
 pyautogui.press('enter')   # Press the enter key
@@ -1237,10 +1203,8 @@ start_time = time.time()
 
 time.sleep(2)
 
-
-
-#Now the program will monitor the conversion of TIF images and will proceed with the rest of the
-#code when the proper amount of images have appeared in the folder
+# Now the program will monitor the conversion of TIF images and will proceed with the rest of the
+# code when the proper amount of images have appeared in the folder
 
 # Define the subdirectory
 subdirectory = "initial_tif_images" #This was created in the ImageJ macro
@@ -1260,21 +1224,21 @@ completion_time = int(end_time - start_time)
 print(f"OCT files converted to TIF images. Time to completion: {completion_time} s")
 
 
+
+# Cropping the TIF images - this is done via ImageJ macro which is triggered by pressing 's'
 if is_imagej_running():     # Making ImageJ the active program
     print("Sending command to ImageJ to crop TIF images")
 else:
     show_error_message("ImageJ is no longer running. Program shutting down.")
     exit()
 
-
-
-# Cropping the TIF images - this is done via ImageJ macro which is triggered by pressing 's'
 pyautogui.press('s')
 start_time = time.time()
 time.sleep(1)
 
+# Waiting until the cropping is complete:
 # Define the subdirectory
-subdirectory = "cropped_tif_images" #This was created in the ImageJ macro
+subdirectory = "cropped_tif_images" # This was created in the ImageJ macro
 cropped_tif_images_directory = os.path.join(image_directory, subdirectory)
 
 # Count the number of .tif files in the subdirectory
@@ -1337,7 +1301,7 @@ def rename_files(directory, annotated_list):    # This will convert the original
 
 
 # Renaming the individual sequence files
-individual_sequence_images_directory = os.path.join(image_directory, "individual_sequence_images")
+individual_sequence_images_directory = os.path.join(image_directory, "individual_sequence_images") # This was created in the ImageJ macro
 rename_files(individual_sequence_images_directory, annotated_list)    # This will convert the original file names into what I want the file names to be
 
 
