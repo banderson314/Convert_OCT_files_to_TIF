@@ -1,7 +1,6 @@
-#Open_OCT_file_2.1.0.py
+#Open_OCT_file_2.1.1.py
 #Converting OCT files to tif files
 #Made by Brandon Anderson, University of Pennsylvania
-#Last updated on August 18, 2023
 
 #For this macro to work, you need the following files:
 #OCT reader plugin - ImageJ macro
@@ -24,7 +23,6 @@ import inspect      # For error messages
 
 # For updates, look for # Update:
 # Update: volume scan
-# Update: grey out horizontal and vertical boxes unless radial is selected
 # Update: change peripheral folder checkbox to entry box
 # Update: custom defaults 
 # Update: extra options dialog box
@@ -145,8 +143,10 @@ def retrieve_variables(preferences_variables, key):
             return True
         elif key == "scan_modes":
             return ['radial', 'linear', 'linear', 'radial', 'radial']
+        # Update: change peripheral folder checkbox to entry box
         elif key == "subfolder_entry":
             return [False, True, True, True, True]
+        # Update: change peripheral folder checkbox to entry box
         elif key == "subfolder_name":
             return "Peripheral images"
         elif key == "horizontal_image_list":
@@ -159,7 +159,6 @@ def retrieve_variables(preferences_variables, key):
             return "25"
         elif key == "max_contrast":
             return "215"
-        # Update: volume scan
 
 
 image_location_list = retrieve_variables(preferences_variables, 'image_location_list')
@@ -172,7 +171,6 @@ vertical_image_list = retrieve_variables(preferences_variables, 'vertical_image_
 unaveraged_images = retrieve_variables(preferences_variables, 'unaveraged_images')
 min_contrast = retrieve_variables(preferences_variables, 'min_contrast')
 max_contrast = retrieve_variables(preferences_variables, 'max_contrast')
-# Update: volume scan
 
 
 # Converting str to whatever it actually is, since only strings come from the txt file
@@ -190,7 +188,6 @@ if type(horizontal_image_list) == str:
     horizontal_image_list = eval(horizontal_image_list)
 if type(vertical_image_list) == str:
     vertical_image_list = eval(vertical_image_list)
-# Update: volume scan
 
 
 
@@ -206,9 +203,10 @@ def location_input_dialog_box():
 
         linear_var = tk.BooleanVar(value=(mode == "linear"))
         radial_var = tk.BooleanVar(value=(mode == "radial"))
+        volume_var = tk.BooleanVar(value=(mode == "volume"))
         linear_vars.append(linear_var)
         radial_vars.append(radial_var)
-        # Update: volume scan
+        volume_vars.append(volume_var)
 
         checkbox_linear = tk.Checkbutton(dialog_frame, variable=linear_var, command=lambda i=len(linear_vars)-1: select_linear(i))
         checkbox_linear.grid(row=row_num, column=1, sticky='s')
@@ -217,44 +215,54 @@ def location_input_dialog_box():
         checkbox_radial = tk.Checkbutton(dialog_frame, variable=radial_var, command=lambda i=len(radial_vars)-1: select_radial(i))
         checkbox_radial.grid(row=row_num, column=2, sticky='s')
         checkbox_radials.append(checkbox_radial)
-
-        # Update: volume scan - checkbox_volume
+        
+        checkbox_volume = tk.Checkbutton(dialog_frame, variable=volume_var, command=lambda i=len(volume_vars)-1: select_volume(i))
+        checkbox_volume.grid(row=row_num, column=3, sticky='s')
+        checkbox_volumes.append(checkbox_volume)
 
 
         # Adding the horizontal and vertical entry boxes
         entry_horizontal = tk.Entry(dialog_frame)
-        entry_horizontal.grid(row=row_num, column=3, sticky='w')
+        entry_horizontal.grid(row=row_num, column=4, sticky='w')
         entry_horizontals.append(entry_horizontal)
 
         entry_vertical = tk.Entry(dialog_frame)
-        entry_vertical.grid(row=row_num, column=4, sticky='w')
+        entry_vertical.grid(row=row_num, column=5, sticky='w')
         entry_verticals.append(entry_vertical)
-        # Update: grey out horizontal and vertical boxes unless radial is selected
+        if mode != "radial":
+            entry_horizontal.config(state='disabled')
+            entry_vertical.config(state='disabled')
 
         # Adding subfolder checkboxes
         subfolder_var = tk.BooleanVar(value=subfolder_mode)
         checkbox_subfolder = tk.Checkbutton(dialog_frame, variable=subfolder_var)
-        checkbox_subfolder.grid(row=row_num, column=5, sticky='s')
+        checkbox_subfolder.grid(row=row_num, column=6, sticky='s')
         checkbox_subfolders.append(checkbox_subfolder)
         subfolder_vars.append(subfolder_var)
         # Update: change peripheral folder checkbox to entry box
 
+        # Change dialog box size to fit everything properly
+        window.update_idletasks()
+        window.geometry("")
         row_num += 1
 
     def remove_entry_row():
         if entry_rows:
-            # Update: volume scan - not sure what to get rid of, but we need to get rid of something
             entry_row = entry_rows.pop()
             entry_row.destroy()
 
             linear_var = linear_vars.pop()
             radial_var = radial_vars.pop()
+            volume_var = volume_vars.pop()
 
             checkbox_linear = checkbox_linears.pop()
             checkbox_linear.destroy()
 
             checkbox_radial = checkbox_radials.pop()
             checkbox_radial.destroy()
+
+            checkbox_volume = checkbox_volumes.pop()
+            checkbox_volume.destroy()
 
             # Remove the corresponding horizontal and vertical entry boxes from the lists and destroy them
             entry_horizontal = entry_horizontals.pop()
@@ -263,39 +271,52 @@ def location_input_dialog_box():
             entry_vertical = entry_verticals.pop()
             entry_vertical.destroy()
 
+            # Update: change peripheral folder checkbox to entry box
             checkbox_subfolder = checkbox_subfolders.pop()
             checkbox_subfolder.destroy()
             subfolder_var = subfolder_vars.pop()
+        
+        # Change dialog box size to fit everything properly
+        window.update_idletasks()
+        window.geometry("")
 
 
     def select_linear(index):
-        # Update: volume scan - done?
         linear_vars[index].set(True)
         radial_vars[index].set(False)
         volume_vars[index].set(False)
+        entry_horizontals[index].delete(0, tk.END)
+        entry_verticals[index].delete(0, tk.END)
+        entry_horizontals[index].config(state='disabled')
+        entry_verticals[index].config(state='disabled')
 
     def select_radial(index):
-        # Update: volume scan - done?
         linear_vars[index].set(False)
         radial_vars[index].set(True)
         volume_vars[index].set(False)
+        entry_horizontals[index].config(state='normal')
+        entry_verticals[index].config(state='normal')
 
     def select_volume(index):
-        # Update: volume scan - add something to call this function
         linear_vars[index].set(False)
         radial_vars[index].set(False)
         volume_vars[index].set(True)
+        entry_horizontals[index].delete(0, tk.END)
+        entry_verticals[index].delete(0, tk.END)
+        entry_horizontals[index].config(state='disabled')
+        entry_verticals[index].config(state='disabled')
+
 
     def restore_defaults():
-        # Update: custom defaults - need to define at function that sees user settings
-        # Update: volume scan - add default volume scan
+        # Update: custom defaults - need to define at function that sees user settings (much earlier in code)
         default_values = ["central", "temporal", "nasal", "superior", "inferior"]
         default_horizontal = ["horizontal", "", "", "", ""]
-        default_radial_or_linear = ["radial", "linear", "linear", "radial", "radial"]
+        default_scan_type = ["radial", "linear", "linear", "radial", "radial"]
         default_vertical = ["vertical", "", "", "superior", "inferior"]
         default_subfolder = [False, True, True, True, True]
-        default_min_contrast = 25
-        default_max_contrast = 215
+        default_min_contrast = 25   # Update: other - need to define this at beginning
+        default_max_contrast = 215  # Update: other - need to define this at beginning
+        default_crop_amount = 480  # Update: other - need to define this at beginning
         default_subfolder_name = "Peripheral images"
         current_row_count = len(entry_rows)
 
@@ -316,30 +337,18 @@ def location_input_dialog_box():
             entry_row.insert(tk.END, default_value)  # Set the default value
 
         # Set the checkboxes in the second and third columns based on default
-        for i, mode in enumerate(default_radial_or_linear):
-            # Update: volume scan - done?
-            if mode == "radial":
-                linear_vars[i].set(False)
-                radial_vars[i].set(True)
-                volume_vars[i].set(False)
-            elif mode == "linear":
-                linear_vars[i].set(True)
-                radial_vars[i].set(False)
-                volume_vars[i].set(False)
-            elif mode == "volume": 
-                linear_vars[i].set(False)
-                radial_vars[i].set(False)
-                volume_vars[i].set(True)
+        for i, mode in enumerate(default_scan_type):
+            if mode == "radial": select_radial(i)
+            elif mode == "linear": select_linear(i)
+            elif mode == "volume": select_volume(i)
 
         # Set the horizontal and vertical entry boxes with default values
         for i, default_value in enumerate(default_horizontal):
-            # Update: grey out horizontal and vertical boxes unless radial is selected - update needed?
             entry_horizontal = entry_horizontals[i]
             entry_horizontal.delete(0, tk.END)
             entry_horizontal.insert(tk.END, default_value)
 
         for i, default_value in enumerate(default_vertical):
-            # Update: grey out horizontal and vertical boxes unless radial is selected - update needed?
             entry_vertical = entry_verticals[i]
             entry_vertical.delete(0, tk.END)
             entry_vertical.insert(tk.END, default_value)
@@ -365,10 +374,14 @@ def location_input_dialog_box():
         min_contrast_entry.insert(0, str(default_min_contrast))
         max_contrast_entry.delete(0, tk.END)
         max_contrast_entry.insert(0, str(default_max_contrast))
+        
+        crop_checkbox_var.set(True)
+        #crop_amount_entry.config(state='normal')
+        crop_amount_entry.delete(0, tk.END)
+        crop_amount_entry.insert(0, default_crop_amount)
 
 
     def confirm(event=None):
-        # Update: volume scan - add variable
         global image_location_list, od_before_os, scan_modes, subfolder_entry, subfolder_name, horizontal_image_list, vertical_image_list, unaveraged_images, min_contrast, max_contrast
 
         image_location_list = []
@@ -376,7 +389,6 @@ def location_input_dialog_box():
         subfolder_entry = []
         horizontal_image_list = []
         vertical_image_list = []
-        # Update: volume scan
 
         for i, entry_row in enumerate(entry_rows):
             text = entry_row.get()
@@ -387,7 +399,8 @@ def location_input_dialog_box():
                 scan_modes.append("linear")
             elif radial_vars[i].get():
                 scan_modes.append("radial")
-            # Update: volume scan
+            elif volume_vars[i].get():
+                scan_modes.append("volume")
             else:
                 scan_modes.append("")
 
@@ -396,7 +409,6 @@ def location_input_dialog_box():
 
         for i, entry_horizontal in enumerate(entry_horizontals):
             text = entry_horizontal.get()
-            # Update: grey out horizontal and vertical boxes unless radial is selected - update needed?
             if text:
                 horizontal_image_list.append(text)
             else:
@@ -404,7 +416,6 @@ def location_input_dialog_box():
 
         for i, entry_vertical in enumerate(entry_verticals):
             text = entry_vertical.get()
-            # Update: grey out horizontal and vertical boxes unless radial is selected - update needed?
             if text:
                 vertical_image_list.append(text)
             else:
@@ -433,7 +444,6 @@ def location_input_dialog_box():
             "scan_modes",
             "subfolder_entry",
             "subfolder_name",
-            # Update: grey out horizontal and vertical boxes unless radial is selected - needed?
             "horizontal_image_list",
             "vertical_image_list",
             "unaveraged_images",
@@ -482,7 +492,6 @@ def location_input_dialog_box():
     dialog_frame.grid(padx=10, pady=10)
 
     entry_rows = []
-    # Update: volume scan - make sure addition of volume_vars and checkbox_volumes works
     linear_vars = []
     radial_vars = []
     volume_vars = []
@@ -502,7 +511,6 @@ def location_input_dialog_box():
     label_linear.grid(row=0, column=1)
     label_radial = tk.Label(dialog_frame, text="radial")
     label_radial.grid(row=0, column=2)
-    # Update: volume scan - done; added volume label
     label_volume = tk.Label(dialog_frame, text="volume")
     label_volume.grid(row=0, column=3)
     label_horizontal = tk.Label(dialog_frame, text="horizontal")
@@ -516,8 +524,7 @@ def location_input_dialog_box():
 
     # Adding existing entry rows with their corresponding checkboxes
     for i, location in enumerate(image_location_list):
-        # Update: volume scan - not sure whta you do here, but you need to do something
-        mode = scan_modes[i] if scan_modes and i < len(scan_modes) else "linear"
+        mode = scan_modes[i] if scan_modes and i < len(scan_modes) else "linear"    # Grabs the scan mode from scan_mode list, but if none available, default is "linear"
         # Update: change peripheral folder checkbox to entry box - this is making a checkbox
         subfolder_mode = subfolder_entry[i] if subfolder_entry and i < len(subfolder_entry) else False
         add_entry_row(mode, subfolder_mode)
@@ -529,6 +536,9 @@ def location_input_dialog_box():
         entry_vertical = entry_verticals[-1]
         entry_horizontal.insert(tk.END, horizontal_image_list[i])
         entry_vertical.insert(tk.END, vertical_image_list[i])
+        if scan_modes[i] != "radial":
+            entry_horizontals[i].config(state='disabled')
+            entry_verticals[i].config(state='disabled')
 
         row_num += 1
 
@@ -556,20 +566,21 @@ def location_input_dialog_box():
     # Getting user input on subfolder name
     # Update: change peripheral folder checkbox to entry box - replace with text that says how many subfolders will be made
     subfolder_frame = tk.Frame(window)
-    subfolder_frame.grid(row=row_num+5, column=0, sticky='w', padx=10)  # Align to the left
+    subfolder_frame.grid(row=row_num, column=0, sticky='w', padx=10)  # Align to the left
     subfolder_name_var = tk.StringVar()
     subfolder_name_var.set(subfolder_name)
     subfolder_name_label = tk.Label(subfolder_frame, text="Subfolder name:")
     subfolder_name_label.pack(side='left')
     subfolder_name_entry = tk.Entry(subfolder_frame, textvariable=subfolder_name_var)
     subfolder_name_entry.pack(side='right')
+    row_num += 1
 
     # Getting user input on contrast values (min and max) (0 and 255 are the ranges, 25 and 215 are recommended)
     contrast_frame = tk.Frame(window)
-    contrast_frame.grid(row=row_num+6, column=0, sticky='w', padx=10)
+    contrast_frame.grid(row=row_num, column=0, sticky='w', padx=10)
     min_contrast_var = tk.StringVar()
     max_contrast_var = tk.StringVar()
-    global min_contrast, max_contrast   # Don't know why this is needed but it is
+    global min_contrast, max_contrast
     min_contrast_var.set(min_contrast)
     max_contrast_var.set(max_contrast)
     contrast_label = tk.Label(contrast_frame, text="Min and max contrast (ranges from 0 to 255): ")
@@ -578,23 +589,42 @@ def location_input_dialog_box():
     max_contrast_entry = tk.Entry(contrast_frame, textvariable=max_contrast_var, width=6)
     min_contrast_entry.pack(side="left")
     max_contrast_entry.pack(side="right")
+    row_num += 1
 
     # Getting user input on cropping
     # Update: custom cropping - make sure this works 
-    crop_boolean = True
-    crop_amount = "480" # Update: custom cropping - make this a variable that is saved (i.e. don't have it defined here)
-    crop_checkbox_var = tk.BooleanVar(value=crop_boolean)
-    crop_checkbox = tk.Checkbutton(window, text="Vertically crop the images around retina", variable=crop_checkbox_var)
-    # Update: custom cropping - maybe make this a button "No cropping" next to it which changes the crop amount to whatever the full amount it
-    crop_checkbox.grid(padx=10, sticky='w')
     crop_amount_frame = tk.Frame(window)
-    crop_amount_frame.grid(row=row_num+7, column=0, sticky='w', padx=10)
+    crop_amount_frame.grid(row=row_num, column=0, sticky='w', padx=10)
+    crop_boolean = True # Need to define above
+    crop_amount = "480" # Need to define above
+    crop_checkbox_var = tk.BooleanVar(value=crop_boolean)
     crop_amount_var = tk.StringVar()
     crop_amount_var.set(crop_amount)
-    crop_amount_label = tk.Label(crop_amount_frame)
-    crop_amount_label.pack(side='left')
+    crop_checkbox = tk.Checkbutton(crop_amount_frame, text="Vertically crop the images around retina", variable=crop_checkbox_var)
+    crop_checkbox.grid(row=0, column=0, sticky='w')
     crop_amount_entry = tk.Entry(crop_amount_frame, textvariable=crop_amount_var, width=6)
+    crop_amount_entry.grid(row=0, column=1)
+    crop_unit_label = tk.Label(crop_amount_frame, text="µm")
+    crop_unit_label.grid(row=0, column=2)
+    row_num += 1
     
+    # Updating the cropping amount based on if the checkbox is selected or not
+    last_crop_amount = crop_amount
+    def update_entry_state(*args):
+        nonlocal last_crop_amount
+        # Enable or disable the entry widget based on the checkbox state
+        if crop_checkbox_var.get():
+            # Restore the previous value when enabling
+            crop_amount_entry.config(state='normal')
+            crop_amount_var.set(last_crop_amount)
+        else:
+            # Record the current value and clear the entry when disabling
+            last_crop_amount = crop_amount_var.get()
+            crop_amount_entry.delete(0, tk.END)
+            crop_amount_entry.config(state='disabled')
+    # Call the update_entry_state function when the checkbox state changes
+    crop_checkbox_var.trace_add('write', update_entry_state)
+    update_entry_state()
 
 
     # Creating "Restore defaults" and "Confirm" buttons at the bottom of the screen
