@@ -159,6 +159,11 @@ def retrieve_variables(preferences_variables, key):
             return "25"
         elif key == "max_contrast":
             return "215"
+        elif key == "crop_boolean":
+            return True
+        elif key == "crop_amount":
+            return "480"
+        
 
 
 image_location_list = retrieve_variables(preferences_variables, 'image_location_list')
@@ -171,6 +176,8 @@ vertical_image_list = retrieve_variables(preferences_variables, 'vertical_image_
 unaveraged_images = retrieve_variables(preferences_variables, 'unaveraged_images')
 min_contrast = retrieve_variables(preferences_variables, 'min_contrast')
 max_contrast = retrieve_variables(preferences_variables, 'max_contrast')
+crop_boolean = retrieve_variables(preferences_variables, "crop_boolean")
+crop_amount = retrieve_variables(preferences_variables, "crop_amount")
 
 
 # Converting str to whatever it actually is, since only strings come from the txt file
@@ -188,6 +195,8 @@ if type(horizontal_image_list) == str:
     horizontal_image_list = eval(horizontal_image_list)
 if type(vertical_image_list) == str:
     vertical_image_list = eval(vertical_image_list)
+if type(crop_boolean) == str:
+    crop_boolean = eval(crop_boolean)
 
 
 
@@ -316,9 +325,13 @@ def location_input_dialog_box():
         default_subfolder = [False, True, True, True, True]
         default_min_contrast = 25   # Update: other - need to define this at beginning
         default_max_contrast = 215  # Update: other - need to define this at beginning
+        default_crop_boolean = True
         default_crop_amount = 480  # Update: other - need to define this at beginning
         default_subfolder_name = "Peripheral images"
         current_row_count = len(entry_rows)
+        od_os_checkbox_boolean = True
+        imagej_checkbox_boolean = False
+        unaveraged_checkbox_boolean = False
 
         # If the current number of rows is less than five, add new rows
         while current_row_count < 5:
@@ -361,10 +374,10 @@ def location_input_dialog_box():
             else:
                 subfolder_vars[i].set(False)
 
-        od_os_checkbox_var.set(True)
-        imagej_checkbox_var.set(False)
+        od_os_checkbox_var.set(od_os_checkbox_boolean)
+        imagej_checkbox_var.set(imagej_checkbox_boolean)
         # Update: extra options dialog box - move this checkbox to an option elsewhere
-        unaveraged_checkbox_var.set(False)
+        unaveraged_checkbox_var.set(unaveraged_checkbox_boolean)
 
         # Update: change peripheral folder checkbox to entry box - change the below to a report on number of subfolders to be made
         subfolder_name_entry.delete(0, tk.END)
@@ -375,7 +388,7 @@ def location_input_dialog_box():
         max_contrast_entry.delete(0, tk.END)
         max_contrast_entry.insert(0, str(default_max_contrast))
         
-        crop_checkbox_var.set(True)
+        crop_checkbox_var.set(default_crop_boolean)
         #crop_amount_entry.config(state='normal')
         crop_amount_entry.delete(0, tk.END)
         crop_amount_entry.insert(0, default_crop_amount)
@@ -383,6 +396,7 @@ def location_input_dialog_box():
 
     def confirm(event=None):
         global image_location_list, od_before_os, scan_modes, subfolder_entry, subfolder_name, horizontal_image_list, vertical_image_list, unaveraged_images, min_contrast, max_contrast
+        global crop_boolean, crop_amount
 
         image_location_list = []
         scan_modes = []
@@ -429,6 +443,9 @@ def location_input_dialog_box():
         unaveraged_images = unaveraged_checkbox_var.get()
         min_contrast = min_contrast_var.get()
         max_contrast = max_contrast_var.get()
+        crop_amount = crop_amount_var.get()
+        crop_boolean = crop_checkbox_var.get()
+
 
         window.destroy()
         window.master.destroy()
@@ -448,7 +465,9 @@ def location_input_dialog_box():
             "vertical_image_list",
             "unaveraged_images",
             "min_contrast",
-            "max_contrast"
+            "max_contrast",
+            "crop_amount",
+            "crop_boolean"
         ]
         lines = [line for line in file_content.splitlines() if not any(line.startswith(variable) for variable in variables_to_replace)]
         if imageJ_location_reenter == True:
@@ -473,6 +492,8 @@ def location_input_dialog_box():
             file.write(f"\nunaveraged_images = {unaveraged_images}")
             file.write(f"\nmin_contrast = {min_contrast}")
             file.write(f"\nmax_contrast = {max_contrast}")
+            file.write(f"\ncrop_amount = {crop_amount}")
+            file.write(f"\ncrop_boolean = {crop_boolean}")
 
 
     def onDialogClose(event=None):
@@ -595,8 +616,6 @@ def location_input_dialog_box():
     # Update: custom cropping - make sure this works 
     crop_amount_frame = tk.Frame(window)
     crop_amount_frame.grid(row=row_num, column=0, sticky='w', padx=10)
-    crop_boolean = True # Need to define above
-    crop_amount = "480" # Need to define above
     crop_checkbox_var = tk.BooleanVar(value=crop_boolean)
     crop_amount_var = tk.StringVar()
     crop_amount_var.set(crop_amount)
@@ -665,6 +684,8 @@ print("horizontal_image_list:", horizontal_image_list)
 print("vertical_image_list:", vertical_image_list)
 print("min_contrast:", min_contrast)
 print("max_contrast:", max_contrast)
+print("crop_boolean:", crop_boolean)
+print("crop_amount:", crop_amount)
 
 
 def remove_underscores(list):       # This needs to be done because I count underscores later and I can't have the user adding them. I'll replace them later.
@@ -777,7 +798,8 @@ for sublist in annotated_list:
     sublist.append(mouseNumber)
     previousEye = currentEye
 
-numberOfMice = mouseNumber
+number_of_mice = mouseNumber
+print(number_of_mice)
 
 #Next we will identify the location based off of the image type and order it appears in
 previousEye = None
@@ -872,10 +894,10 @@ def createMouseNumberDialogBox():
 
     definition_of_acronymns = "\n".join([f"{value} = {key}" for key, value in location_mapping.items()])
     instructions_label2 = ttk.Label(dialog_frame, text=definition_of_acronymns)
-    instructions_label2.grid(row=numberOfMice + 2, column=0, columnspan=4, padx=5, pady=5, sticky="w")
+    instructions_label2.grid(row=number_of_mice + 2, column=0, columnspan=4, padx=5, pady=5, sticky="w")
 
     entry_boxes = []
-    for i in range(numberOfMice):
+    for i in range(number_of_mice):
         ttk.Label(dialog_frame, text=str(i + 1)).grid(row=i + 2, column=0, padx=5)
         entry = ttk.Entry(dialog_frame)
         entry.grid(row=i + 2, column=1, padx=5)
@@ -902,10 +924,10 @@ def createMouseNumberDialogBox():
         root.destroy()
 
     save_button = ttk.Button(dialog_frame, text="Confirm", command=onConfirmButtonClick)
-    save_button.grid(row=numberOfMice + 3, column=1, pady=10)
+    save_button.grid(row=number_of_mice + 3, column=1, pady=10)
 
     edit_button = ttk.Button(dialog_frame, text="Edit", command=onEditButtonClick)
-    edit_button.grid(row=numberOfMice + 3, column=2, pady=10)
+    edit_button.grid(row=number_of_mice + 3, column=2, pady=10)
 
     window.bind("<Escape>", onDialogClose)
     window.bind("<Return>", onConfirmButtonClick)
@@ -1649,6 +1671,7 @@ else:
 
 
 # Putting images in subdirectory as specified by user
+# Update: change peripheral folder checkbox to entry box
 subfolder_exists = False    # this is just for the restore_underscore function down below
 for filename in os.listdir(averaged_images_directory):
     name_elements = filename.split('_')
