@@ -1,4 +1,4 @@
-# Process OCT files
+# Convert .OCT files to .TIF files
  A script that uses python and ImageJ to convert .OCT files into .TIF files, crops them to just include the retina, renames them to the user's specifications, and enhances contrast.
 
 This program is initiated by running Open_OCT_file_2.1.0.py. That python script will automatically open up ImageJ and run the Open_OCT_file_imagej_supplement_1.2.ijm macro (also in this repository). The macro will need the following other macros (not in this repository) installed:
