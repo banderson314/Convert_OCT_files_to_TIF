@@ -1,4 +1,4 @@
-#Open_OCT_file_2.1.1.py
+#Open_OCT_file_2.2.0.py
 #Converting OCT files to tif files
 #Made by Brandon Anderson, University of Pennsylvania
 
@@ -26,7 +26,6 @@ import inspect      # For error messages
 # Update: change peripheral folder checkbox to entry box
 # Update: custom defaults 
 # Update: extra options dialog box
-# Update: custom cropping
 # Update: other
 # Update: handle multiple experiments from one date
 
@@ -159,6 +158,9 @@ def retrieve_variables(preferences_variables, key):
             return "25"
         elif key == "max_contrast":
             return "215"
+        elif key == "crop_amount":
+            return "480"
+        
 
 
 image_location_list = retrieve_variables(preferences_variables, 'image_location_list')
@@ -171,6 +173,7 @@ vertical_image_list = retrieve_variables(preferences_variables, 'vertical_image_
 unaveraged_images = retrieve_variables(preferences_variables, 'unaveraged_images')
 min_contrast = retrieve_variables(preferences_variables, 'min_contrast')
 max_contrast = retrieve_variables(preferences_variables, 'max_contrast')
+crop_amount = retrieve_variables(preferences_variables, "crop_amount")
 
 
 # Converting str to whatever it actually is, since only strings come from the txt file
@@ -188,6 +191,7 @@ if type(horizontal_image_list) == str:
     horizontal_image_list = eval(horizontal_image_list)
 if type(vertical_image_list) == str:
     vertical_image_list = eval(vertical_image_list)
+
 
 
 
@@ -319,6 +323,9 @@ def location_input_dialog_box():
         default_crop_amount = 480  # Update: other - need to define this at beginning
         default_subfolder_name = "Peripheral images"
         current_row_count = len(entry_rows)
+        od_os_checkbox_boolean = True
+        imagej_checkbox_boolean = False
+        unaveraged_checkbox_boolean = False
 
         # If the current number of rows is less than five, add new rows
         while current_row_count < 5:
@@ -361,10 +368,10 @@ def location_input_dialog_box():
             else:
                 subfolder_vars[i].set(False)
 
-        od_os_checkbox_var.set(True)
-        imagej_checkbox_var.set(False)
+        od_os_checkbox_var.set(od_os_checkbox_boolean)
+        imagej_checkbox_var.set(imagej_checkbox_boolean)
         # Update: extra options dialog box - move this checkbox to an option elsewhere
-        unaveraged_checkbox_var.set(False)
+        unaveraged_checkbox_var.set(unaveraged_checkbox_boolean)
 
         # Update: change peripheral folder checkbox to entry box - change the below to a report on number of subfolders to be made
         subfolder_name_entry.delete(0, tk.END)
@@ -375,15 +382,13 @@ def location_input_dialog_box():
         max_contrast_entry.delete(0, tk.END)
         max_contrast_entry.insert(0, str(default_max_contrast))
         
-        crop_checkbox_var.set(True)
-        #crop_amount_entry.config(state='normal')
         crop_amount_entry.delete(0, tk.END)
         crop_amount_entry.insert(0, default_crop_amount)
 
 
     def confirm(event=None):
-        global image_location_list, od_before_os, scan_modes, subfolder_entry, subfolder_name, horizontal_image_list, vertical_image_list, unaveraged_images, min_contrast, max_contrast
-
+        global image_location_list, od_before_os, scan_modes, subfolder_entry, subfolder_name, horizontal_image_list, vertical_image_list, unaveraged_images, min_contrast, max_contrast, crop_amount
+        
         image_location_list = []
         scan_modes = []
         subfolder_entry = []
@@ -429,6 +434,8 @@ def location_input_dialog_box():
         unaveraged_images = unaveraged_checkbox_var.get()
         min_contrast = min_contrast_var.get()
         max_contrast = max_contrast_var.get()
+        crop_amount = crop_amount_var.get()
+
 
         window.destroy()
         window.master.destroy()
@@ -448,7 +455,8 @@ def location_input_dialog_box():
             "vertical_image_list",
             "unaveraged_images",
             "min_contrast",
-            "max_contrast"
+            "max_contrast",
+            "crop_amount",
         ]
         lines = [line for line in file_content.splitlines() if not any(line.startswith(variable) for variable in variables_to_replace)]
         if imageJ_location_reenter == True:
@@ -473,9 +481,10 @@ def location_input_dialog_box():
             file.write(f"\nunaveraged_images = {unaveraged_images}")
             file.write(f"\nmin_contrast = {min_contrast}")
             file.write(f"\nmax_contrast = {max_contrast}")
+            file.write(f"\ncrop_amount = {crop_amount}")
 
 
-    def onDialogClose(event=None):
+    def on_dialog_close(event=None):
         window.master.destroy()
         exit()
 
@@ -483,7 +492,7 @@ def location_input_dialog_box():
 
     window = tk.Toplevel()
     window.title("Image settings")
-    window.protocol("WM_DELETE_WINDOW", onDialogClose)
+    window.protocol("WM_DELETE_WINDOW", on_dialog_close)
 
     instructions_label = tk.Label(window, text="Please enter the order that the images were taken in and what scan mode was used. If radial\nscans were used, record what the horizontal and vertical images represent. If this is not\nprovided for the radial images, then the image will not be processed. These will be used for the\nfile name.", justify='left')
     instructions_label.grid(padx=10, sticky='w')
@@ -592,40 +601,18 @@ def location_input_dialog_box():
     row_num += 1
 
     # Getting user input on cropping
-    # Update: custom cropping - make sure this works 
     crop_amount_frame = tk.Frame(window)
     crop_amount_frame.grid(row=row_num, column=0, sticky='w', padx=10)
-    crop_boolean = True # Need to define above
-    crop_amount = "480" # Need to define above
-    crop_checkbox_var = tk.BooleanVar(value=crop_boolean)
     crop_amount_var = tk.StringVar()
     crop_amount_var.set(crop_amount)
-    crop_checkbox = tk.Checkbutton(crop_amount_frame, text="Vertically crop the images around retina", variable=crop_checkbox_var)
-    crop_checkbox.grid(row=0, column=0, sticky='w')
+    crop_label = tk.Label(crop_amount_frame, text="Vertically crop around the retina (recommend: 480 max: 1577): ")
+    crop_label.grid(row=0, column=0)
     crop_amount_entry = tk.Entry(crop_amount_frame, textvariable=crop_amount_var, width=6)
     crop_amount_entry.grid(row=0, column=1)
     crop_unit_label = tk.Label(crop_amount_frame, text="µm")
     crop_unit_label.grid(row=0, column=2)
     row_num += 1
     
-    # Updating the cropping amount based on if the checkbox is selected or not
-    last_crop_amount = crop_amount
-    def update_entry_state(*args):
-        nonlocal last_crop_amount
-        # Enable or disable the entry widget based on the checkbox state
-        if crop_checkbox_var.get():
-            # Restore the previous value when enabling
-            crop_amount_entry.config(state='normal')
-            crop_amount_var.set(last_crop_amount)
-        else:
-            # Record the current value and clear the entry when disabling
-            last_crop_amount = crop_amount_var.get()
-            crop_amount_entry.delete(0, tk.END)
-            crop_amount_entry.config(state='disabled')
-    # Call the update_entry_state function when the checkbox state changes
-    crop_checkbox_var.trace_add('write', update_entry_state)
-    update_entry_state()
-
 
     # Creating "Restore defaults" and "Confirm" buttons at the bottom of the screen
     # Update: custom defaults - include button "Options"
@@ -637,7 +624,7 @@ def location_input_dialog_box():
     confirm_button.pack(side='right', pady=10, padx=10)
 
 
-    window.bind("<Escape>", onDialogClose)
+    window.bind("<Escape>", on_dialog_close)
     window.bind("<Return>", confirm)
 
     window.master.attributes("-alpha", 0)  # Set window opacity to 0 to make it invisible
@@ -665,6 +652,7 @@ print("horizontal_image_list:", horizontal_image_list)
 print("vertical_image_list:", vertical_image_list)
 print("min_contrast:", min_contrast)
 print("max_contrast:", max_contrast)
+print("crop_amount:", crop_amount)
 
 
 def remove_underscores(list):       # This needs to be done because I count underscores later and I can't have the user adding them. I'll replace them later.
@@ -706,31 +694,34 @@ else:
 
 # Deleting all the directories previously made by this script if the user decides to run the script again in the same folder
 # This is mainly for development to test the script
+# Update: handle multiple experiments from one date - as is it will delete the final products if you run it twice on the same date for differenct experiments
 delete_directory(os.path.join(image_directory, "averaged_images"))
 delete_directory(os.path.join(image_directory, "cropped_tif_images"))
 delete_directory(os.path.join(image_directory, "images_to_be_averaged"))
 delete_directory(os.path.join(image_directory, "individual_sequence_images"))
 delete_directory(os.path.join(image_directory, "unaveraged_images"))
-annotated_text_file = os.path.join(image_directory, "Annotated_list_of_files.txt")
-if os.path.exists(annotated_text_file):
-    os.remove(annotated_text_file)
-imagej_settings_file = os.path.join(image_directory, "ImageJ_contrast_settings.txt")
+delete_directory(os.path.join(image_directory, "initial_tif_images"))
+delete_directory(os.path.join(image_directory, "volume_scans"))
+if os.path.exists(os.path.join(image_directory, "Annotated_list_of_images.txt")):
+    os.remove(os.path.join(image_directory, "Annotated_list_of_images.txt"))
+if os.path.exists(os.path.join(image_directory, "Annotated_list_of_volume_scans.txt")):
+    os.remove(os.path.join(image_directory, "Annotated_list_of_volume_scans.txt"))
+imagej_settings_file = os.path.join(image_directory, "ImageJ_settings.txt")
 if os.path.exists(imagej_settings_file):
     os.remove(imagej_settings_file)
 
 
-# Saving the min and max values so that ImageJ can access them
+# Saving the crop, min and max values so that ImageJ can access them
 with open(imagej_settings_file, "w") as file:
-    file.write(str(min_contrast))
-    file.write("\n")
-    file.write(str(max_contrast))
+    file.write(f"{crop_amount}\n{min_contrast}\n{max_contrast}\n")
 
 
 #PUTTING FILE NAMES TOGETHER IN LIST
 # Retrieve all file names in the directory
 fileNames = [file for file in os.listdir(image_directory) if os.path.isfile(os.path.join(image_directory, file))]
 
-filteredFiles = [name for name in fileNames if name.endswith(".OCT") and "RegAvg" not in name and name.split("_")[2] != "V"]  #Removing any files that contain "RegAvg" and aren't .OCT and aren't volume scans
+# Update: volume scan - removed <and name.split("_")[2] != "V">
+filteredFiles = [name for name in fileNames if name.endswith(".OCT") and "RegAvg" not in name]  #Removing any files that contain "RegAvg" and aren't .OCT
 
 #Checking to make sure all images are from the same date and experiment
 # Update: handle multiple experiments from one date
@@ -756,9 +747,8 @@ for sublist in annotated_list:   #interpreting what the image type is
         sublist[2] = "radial"
     elif sublist[2] == "L":
         sublist[2] = "linear"
-    elif sublist[2] == "V":     #These shouldn't be in the list so if they are this is a problem
+    elif sublist[2] == "V":
         sublist[2] = "volume"
-        print("Volume scan detected. This is a problem.")
 
 annotated_list.sort(key=lambda x: x[3])  #sorting the list by ID number (and thus by time it was taken)
 
@@ -777,7 +767,8 @@ for sublist in annotated_list:
     sublist.append(mouseNumber)
     previousEye = currentEye
 
-numberOfMice = mouseNumber
+number_of_mice = mouseNumber
+print(number_of_mice)
 
 #Next we will identify the location based off of the image type and order it appears in
 previousEye = None
@@ -798,8 +789,8 @@ for sublist in annotated_list:
 #Figuring out how many images each mouse/eye has
 #annotated_list format: [0 file name, 1 eye, 2 image type, 3 ID number, 4 arbitrary mouse number]
 #Making a new list to define each eye image
-#eyeImagesList format: [0 mouse, 1 eye, 2 image locations]
-eyeImagesList = []
+#eye_images_list format: [0 mouse, 1 eye, 2 image locations]
+eye_images_list = []
 
 location_mapping = {image_location: image_location[0].upper() for image_location in image_location_list}
 
@@ -812,26 +803,26 @@ for sublist in annotated_list:
 
     found = False
 
-    for item in eyeImagesList:
+    for item in eye_images_list:
         if mouse == item[0] and eye == item[1]:   #Checking if the mouse/eye combo are there
             item[2] += location
             found = True
             break
 
     if found == False:
-        eyeImagesList.append([mouse, eye, location])
+        eye_images_list.append([mouse, eye, location])
 
 
 #Having the user fill in the mouse numbers
-def createMouseNumberDialogBox():
+def create_mouse_number_dialog_box():
     global edit
     edit = False
 
-    def onDialogClose(event=None):
+    def on_dialog_close(event=None):
         root.destroy()
         exit()
 
-    def saveNumbers():
+    def save_numbers():
         global inputted_mouse_numbers
         inputted_mouse_numbers = []
         for entry in entry_boxes:
@@ -841,7 +832,7 @@ def createMouseNumberDialogBox():
             else:
                 inputted_mouse_numbers.append("")
 
-    def onArrowKeyPress(event):
+    def on_arrow_key_press(event):
         focused_entry = window.focus_get()
         if focused_entry:
             focused_entry_idx = entry_boxes.index(focused_entry)
@@ -856,7 +847,7 @@ def createMouseNumberDialogBox():
 
     window = tk.Toplevel()
     window.title("Number Input")
-    window.protocol("WM_DELETE_WINDOW", onDialogClose)
+    window.protocol("WM_DELETE_WINDOW", on_dialog_close)
 
     dialog_frame = ttk.Frame(window)
     dialog_frame.pack(padx=10, pady=10)
@@ -872,45 +863,45 @@ def createMouseNumberDialogBox():
 
     definition_of_acronymns = "\n".join([f"{value} = {key}" for key, value in location_mapping.items()])
     instructions_label2 = ttk.Label(dialog_frame, text=definition_of_acronymns)
-    instructions_label2.grid(row=numberOfMice + 2, column=0, columnspan=4, padx=5, pady=5, sticky="w")
+    instructions_label2.grid(row=number_of_mice + 2, column=0, columnspan=4, padx=5, pady=5, sticky="w")
 
     entry_boxes = []
-    for i in range(numberOfMice):
+    for i in range(number_of_mice):
         ttk.Label(dialog_frame, text=str(i + 1)).grid(row=i + 2, column=0, padx=5)
         entry = ttk.Entry(dialog_frame)
         entry.grid(row=i + 2, column=1, padx=5)
         entry_boxes.append(entry)
 
-        matching_item = next((item for item in eyeImagesList if item[0] == i + 1 and item[1] == "OD"), None)
+        matching_item = next((item for item in eye_images_list if item[0] == i + 1 and item[1] == "OD"), None)
         if matching_item:
             last_three_items = ", ".join(map(str, matching_item[2:]))
             ttk.Label(dialog_frame, text=last_three_items).grid(row=i + 2, column=2, padx=5)
 
-        matching_item = next((item for item in eyeImagesList if item[0] == i + 1 and item[1] == "OS"), None)
+        matching_item = next((item for item in eye_images_list if item[0] == i + 1 and item[1] == "OS"), None)
         if matching_item:
             last_three_items = ", ".join(map(str, matching_item[2:]))
             ttk.Label(dialog_frame, text=last_three_items).grid(row=i + 2, column=3, padx=5)
 
-    def onConfirmButtonClick(event=None):
-        saveNumbers()
+    def on_confirm_button_click(event=None):
+        save_numbers()
         root.destroy()
 
-    def onEditButtonClick():
-        saveNumbers()
+    def on_edit_button_click():
+        save_numbers()
         global edit
         edit = True
         root.destroy()
 
-    save_button = ttk.Button(dialog_frame, text="Confirm", command=onConfirmButtonClick)
-    save_button.grid(row=numberOfMice + 3, column=1, pady=10)
+    save_button = ttk.Button(dialog_frame, text="Confirm", command=on_confirm_button_click)
+    save_button.grid(row=number_of_mice + 3, column=1, pady=10)
 
-    edit_button = ttk.Button(dialog_frame, text="Edit", command=onEditButtonClick)
-    edit_button.grid(row=numberOfMice + 3, column=2, pady=10)
+    edit_button = ttk.Button(dialog_frame, text="Edit", command=on_edit_button_click)
+    edit_button.grid(row=number_of_mice + 3, column=2, pady=10)
 
-    window.bind("<Escape>", onDialogClose)
-    window.bind("<Return>", onConfirmButtonClick)
-    window.bind("<Down>", onArrowKeyPress)
-    window.bind("<Up>", onArrowKeyPress)
+    window.bind("<Escape>", on_dialog_close)
+    window.bind("<Return>", on_confirm_button_click)
+    window.bind("<Down>", on_arrow_key_press)
+    window.bind("<Up>", on_arrow_key_press)
 
     window.grab_set()
 
@@ -919,33 +910,33 @@ def createMouseNumberDialogBox():
 
     window.mainloop()
 
-createMouseNumberDialogBox()
+create_mouse_number_dialog_box()
 
 remove_underscores(inputted_mouse_numbers)  # This needs to be done because I count underscores later and I can't have the user adding them. I'll replace them later.
 
 #Putting the inputted mouse numbers into a dictionary
 i=1
-mouseNumberDict = {}
+mouse_number_dict = {}
 for number in inputted_mouse_numbers:
-    mouseNumberDict[i] = number
+    mouse_number_dict[i] = number
     i += 1
 
 #Revising the annotatedList to include the real mouse numbers (or blanks if that was what was provided)
 for sublist in annotated_list:
-    newNumber = mouseNumberDict.get(sublist[4], "dialogBoxError")
+    newNumber = mouse_number_dict.get(sublist[4], "dialogBoxError")
     sublist[4] = newNumber
 
 
 #If the user clicked on the "Edit" button in the previous dialog box, then this dialog box will appear
-def createIndividualDialogBox(annotated_list):
+def create_individual_dialog_box(annotated_list):
     newannotated_list = []
 
-    def onDialogClose2(event=None):
+    def on_dialog_close2(event=None):
         window.destroy()
         window.master.destroy()
         exit()
 
-    def onConfirmButtonClick2(event=None):
+    def on_confirm_button_click2(event=None):
         nonlocal newannotated_list
         for i, (mouse_entry, eye_entry, location_entry) in enumerate(entry_boxes):
             mouse_value = mouse_entry.get().strip()
@@ -961,7 +952,7 @@ def createIndividualDialogBox(annotated_list):
         elif event.num == 4 or event.delta > 0:
             canvas.yview_scroll(-1, "units")
 
-    def onArrowKeyPress(event): #This allows you to use the up and down arrow keys to navigate the entry boxes
+    def on_arrow_key_press(event): #This allows you to use the up and down arrow keys to navigate the entry boxes
         focused_entry = window.focus_get()
         for entry_box in entry_boxes:
             if entry_box[0] == focused_entry or entry_box[1] == focused_entry or entry_box[2] == focused_entry:
@@ -981,7 +972,7 @@ def createIndividualDialogBox(annotated_list):
 
     window = tk.Toplevel()
     window.title("Edit Individual Files")
-    window.protocol("WM_DELETE_WINDOW", onDialogClose2)
+    window.protocol("WM_DELETE_WINDOW", on_dialog_close2)
 
     dialog_frame = ttk.Frame(window)
     dialog_frame.pack(padx=10, pady=10)
@@ -1022,14 +1013,14 @@ def createIndividualDialogBox(annotated_list):
         newannotated_list.append(sublist[:])
         entry_boxes.append((mouse_entry, eye_entry, location_entry))
 
-    confirm_button = ttk.Button(dialog_frame, text="Confirm", command=onConfirmButtonClick2)
+    confirm_button = ttk.Button(dialog_frame, text="Confirm", command=on_confirm_button_click2)
     confirm_button.grid(row=3, columnspan=4, pady=10)
 
     window.bind("<MouseWheel>", onScroll)
-    window.bind("<Escape>", onDialogClose2)
-    window.bind("<Return>", onConfirmButtonClick2)
-    window.bind("<Down>", onArrowKeyPress)
-    window.bind("<Up>", onArrowKeyPress)
+    window.bind("<Escape>", on_dialog_close2)
+    window.bind("<Return>", on_confirm_button_click2)
+    window.bind("<Down>", on_arrow_key_press)
+    window.bind("<Up>", on_arrow_key_press)
 
 
     window.transient(window.master)
@@ -1044,24 +1035,40 @@ def createIndividualDialogBox(annotated_list):
     return newannotated_list
 
 if edit == True:
-    newannotated_list = createIndividualDialogBox(annotated_list)
+    newannotated_list = create_individual_dialog_box(annotated_list)
     annotated_list = newannotated_list
 
 
-#Saving the annotated_list to a txt file in the image directory
-annotated_text_file = "Annotated_list_of_files.txt" # Name of text file
 
-filepath = f"{image_directory}/{annotated_text_file}" # Create the full path to the text file
+# Dividing the images into list of videos and list of images
+annotated_list_volume_scans = []
+annotated_list_image_scans = []    # For radial and linear scans
+for sublist in annotated_list:
+    if sublist[2] == "volume":
+        annotated_list_volume_scans.append(sublist)
+    else:
+        annotated_list_image_scans.append(sublist)
+
+# Saving the annotated_list to a txt file in the image directory
+annotated_volume_text_file = os.path.join(image_directory, "Annotated_list_of_volume_scans.txt")
+annotated_images_text_file = os.path.join(image_directory, "Annotated_list_of_images.txt")
 
 # Open the file in write mode
-with open(filepath, "w") as file:
-    for sublist in annotated_list:
+with open(annotated_volume_text_file, "w") as file:
+    for sublist in annotated_list_volume_scans:
+        # Convert the sublist to a string and write it to the file
+        sublist_str = str(sublist)
+        file.write(sublist_str)
+        file.write('\n')  # Add a newline character after each sublist
+with open(annotated_images_text_file, "w") as file:
+    for sublist in annotated_list_image_scans:
         # Convert the sublist to a string and write it to the file
         sublist_str = str(sublist)
         file.write(sublist_str)
         file.write('\n')  # Add a newline character after each sublist
 
-print(f"Number of images found: {len(annotated_list)}")
+print(f"Number of images found: {len(annotated_list_image_scans)}")
+print(f"Number of volume scans found: {len(annotated_list_volume_scans)}")
 
 
 
@@ -1101,7 +1108,7 @@ def identify_file_locations(preferences_variables, key):
             return handle_key_input(prompt, "file")
 
         elif key == "macro_location":
-            prompt = f"After clicking 'OK,' please select the location of the file called \"Open_OCT_file_imagej_supplement_1.2.\""
+            prompt = f"After clicking 'OK,' please select the location of the file called \"Open_OCT_file_imagej_supplement_1.3.\""
             return handle_key_input(prompt, "file")
 
         return None
@@ -1114,8 +1121,6 @@ macro_location = macro_location.replace("/", "\\")
 imagej_location = imagej_location.replace("/", "\\")
 
 
-
-# From 2.0.3b:
 
 # Checking if ImageJ is open and if it isn't, opening it
 
@@ -1177,12 +1182,10 @@ wait_to_appear(os.path.join(screenshot_directory, "plugins_button.png"), 30)
 plugins_button_path = os.path.join(screenshot_directory, "plugins_button.png")
 click_on_image_center(plugins_button_path)
 
-# Simulate keyboard actions
+# Simulate keyboard actions to get to macro installation
 pyautogui.press('down')    # Press the down arrow key
 pyautogui.press('right')   # Press the right arrow key
 pyautogui.press('enter')   # Press the enter key
-
-
 
 
 # Entering in the ImageJ macro name
@@ -1209,117 +1212,96 @@ time.sleep(0.5)
 
 
 # Press 'a' key to trigger the ImageJ macro that converts OCT images to TIF images
-print("Sending command to ImageJ to convert OCT files to TIF files")
+print("Sending command to ImageJ to convert OCT files")
 pyautogui.press('a')
-start_time = time.time()
 
 time.sleep(2)
 
+# Update: volume scan - update code below to also monitor volume scan folder
 
 
-#Now the program will monitor the conversion of TIF images and will proceed with the rest of the
-#code when the proper amount of images have appeared in the folder
+# Now the program will monitor the conversion of OCT images and will proceed with the rest of the
+# code when the proper amount of images have appeared in the folder
 
-# Define the subdirectory
-subdirectory = "initial_tif_images" #This was created in the ImageJ macro
-initial_tif_images_directory = os.path.join(image_directory, subdirectory)
+def monitor_file_creation_in_directory(directory, annotated_list_of_files, file_type):
+    # file_type should be '.tif' or '.avi' or some other similar string
 
-# Count the number of .tif files in the initial_tif_images_directory
-file_count = sum(1 for file in os.listdir(initial_tif_images_directory) if file.endswith('.tif'))
+    # Count the number of file_type files in the directory
+    file_count = 0
 
-# Wait until the count matches the number of sublists in annotated_list
-while file_count != len(annotated_list):
-    file_count = sum(1 for file in os.listdir(initial_tif_images_directory) if file.endswith('.tif'))
-    time.sleep(0.1)
+    # Wait until the count matches the number of sublists in annotated_list
+    while file_count != len(annotated_list_of_files):
+        file_count = sum(1 for file in os.listdir(directory) if file.endswith(file_type))
+        time.sleep(0.1)
 
-# Reporting that that process is done
-end_time = time.time()
-completion_time = int(end_time - start_time)
-print(f"OCT files converted to TIF images. Time to completion: {completion_time} s")
+# First will monitor the creation of .tif files
+cropped_tif_images_directory = os.path.join(image_directory, "cropped_tif_images") # This was created in the ImageJ macro
+monitor_file_creation_in_directory(cropped_tif_images_directory, annotated_list_image_scans, ".tif")
+print("OCT files converted into TIF files and cropped")
 
+# Then will monitor the creation of .avi files
+volume_scan_directory = os.path.join(image_directory, "volume_scans") # This was created in the ImageJ macro
+monitor_file_creation_in_directory(volume_scan_directory, annotated_list_volume_scans, ".avi")
+print("OCT files converted into AVI files and cropped")
 
-if is_imagej_running():     # Making ImageJ the active program
-    print("Sending command to ImageJ to crop TIF images")
-else:
-    show_error_message("ImageJ is no longer running. Program shutting down.")
-    exit()
-
-
-
-# Cropping the TIF images - this is done via ImageJ macro which is triggered by pressing 's'
-pyautogui.press('s')
-start_time = time.time()
-time.sleep(1)
-
-# Define the subdirectory
-subdirectory = "cropped_tif_images" #This was created in the ImageJ macro
-cropped_tif_images_directory = os.path.join(image_directory, subdirectory)
-
-# Count the number of .tif files in the subdirectory
-file_count = sum(1 for file in os.listdir(cropped_tif_images_directory) if file.endswith('.tif'))
-
-# Wait until the count matches the number of sublists in annotated_list     # I don't think this is waiting a proper amount of time. Fix please
-while file_count != len(annotated_list):
-    file_count = sum(1 for file in os.listdir(cropped_tif_images_directory) if file.endswith('.tif'))
-    time.sleep(0.1)
-
-# Reporting that that process is done
-end_time = time.time()
-completion_time = int(end_time - start_time)
-print(f"TIF images cropped. Time to completion: {completion_time} s")
-
-
-
-delete_directory(initial_tif_images_directory)
+time.sleep(3)   # Give ImageJ time to close out of the image files
 
 
 
 
 
-
-
-
-#From 2.0.3c:
-
-def rename_files(directory, annotated_list):    # This will convert the original file names into what I want the file names to be
+def rename_files(directory, annotated_list, is_volume_scan):    # This will convert the original file names into what I want the file names to be
     file_list = os.listdir(directory)
     file_count = len(file_list)
 
-    for filename in file_list:
-        individual_sequence_file_name = os.path.splitext(filename)[0]
-        individual_sequence_file_name_base = individual_sequence_file_name[:-2]  # Remove the last 2 characters - the image number from the image sequence
+    for file_name_with_extension in file_list:
+        file_name = os.path.splitext(file_name_with_extension)[0]
 
+        if not is_volume_scan:
+            file_name = file_name[:-2]  # Remove the last 2 characters - the image number from the image sequence
+        
         for sublist in annotated_list:
             annotated_file_name = sublist[0]
-            annotated_list_name_without_extension = annotated_file_name[:-4]  # Remove the last 4 characters
+            annotated_list_name_without_extension = annotated_file_name[:-4]  # Remove the last 4 characters (".OCT")
 
-            if individual_sequence_file_name_base == annotated_list_name_without_extension:
+            if file_name == annotated_list_name_without_extension:
                 eye = sublist[1]
                 location = sublist[5]
                 mouse_number = sublist[4]
-                new_name = f"{mouse_number}_{eye}_{location}_{filename[-6:]}"
+
+                if is_volume_scan:
+                    micron_depth = int(crop_amount)
+                    mm_depth = micron_depth / 1000
+                    final_part_of_file_name = f"{mm_depth:.3f}".rstrip('0').rstrip('.') + "mmdepth.avi"     # Reports up to 3 decimal places in name
+                else:   # For non-volume scans we need to keep the last identifier numbers. We'll add "mmdepth" later when averaging
+                    final_part_of_file_name = file_name_with_extension[-6:]
+
+                new_name = f"{mouse_number}_{eye}_{location}_{final_part_of_file_name}"
                 break
-        else:
-            new_name = filename  # Use original filename if no match is found
+            else:
+                new_name = file_name_with_extension  # Use original file_name_with_extension if no match is found
 
         # Construct the full paths for the old and new names
-        old_path = os.path.join(directory, filename)
+        old_path = os.path.join(directory, file_name_with_extension)
         new_path = os.path.join(directory, new_name)
 
         # Rename the file
         os.rename(old_path, new_path)
 
-    print(f"Renamed {file_count} files.")
+    print(f"Renamed {file_count} files in {os.path.basename(directory)}")
 
+for item in annotated_list_volume_scans:
+    print(item)
 
+# Renaming the individual sequence files and volume scan files
+individual_sequence_images_directory = os.path.join(image_directory, "individual_sequence_images") # This was created in the ImageJ macro
+rename_files(individual_sequence_images_directory, annotated_list_image_scans, False)    # This will convert the original file names into what I want the file names to be
+rename_files(volume_scan_directory, annotated_list_volume_scans, True)
 
-
-# Renaming the individual sequence files
-individual_sequence_images_directory = os.path.join(image_directory, "individual_sequence_images")
-rename_files(individual_sequence_images_directory, annotated_list)    # This will convert the original file names into what I want the file names to be
 
 
 # Deleting the unneeded horizontal images
+# Update: more radial scans - pretty sure you need to change this section to be more robust
 def edit_and_delete_sequence_images(directory_path):
     file_list = os.listdir(directory_path)
 
@@ -1588,7 +1570,12 @@ def averaging_images(directory_path, image_directory):
 
 
         old_path = target_file_path
-        file_name = group_files[0][:-6] + "0.48mmdepth.tif"
+
+        micron_depth = int(crop_amount)
+        mm_depth = micron_depth / 1000
+        mmdepth_text = f"{mm_depth:.3f}".rstrip('0').rstrip('.') + "mmdepth"     # Reports up to 3 decimal places in name
+
+        file_name = group_files[0][:-6] + mmdepth_text + ".tif"
         new_path = os.path.join(averaged_images_directory, file_name)
 
         time.sleep(0.5)
@@ -1603,14 +1590,15 @@ def averaging_images(directory_path, image_directory):
 
 
 # Call the averaging_images function
-averaging_images(individual_sequence_images_directory, image_directory)
-time.sleep(1)   # Waiting one second in order to properly delete "rotatedRegAvgImg.tif"
 averaged_images_directory = os.path.join(image_directory, "averaged_images")
-os.remove(os.path.join(averaged_images_directory, "rotatedRegAvgImg.tif"))
+if annotated_list_image_scans:  # Only proceeds if there are items in annotated_list_image_scans
+    averaging_images(individual_sequence_images_directory, image_directory)
+    time.sleep(1)   # Waiting one second in order to properly delete "rotatedRegAvgImg.tif"
+    os.remove(os.path.join(averaged_images_directory, "rotatedRegAvgImg.tif"))
 
 # Creating an unaveraged image folder, if the user specified so
-if unaveraged_images is True:
-    unaveraged_images_directory = os.path.join(image_directory, "unaveraged_images")
+unaveraged_images_directory = os.path.join(image_directory, "unaveraged_images")
+if annotated_list_image_scans and unaveraged_images is True:
     os.makedirs(unaveraged_images_directory, exist_ok=True)
     individual_sequence_files = os.listdir(individual_sequence_images_directory)
     # Group files based on mouse number, eye, and location
@@ -1638,29 +1626,32 @@ if unaveraged_images is True:
 
 
 # Enhancing the contrast of the images
-if is_imagej_running():     # Making ImageJ the active program
-    print("Sending command to ImageJ to enhance contrast")
-    pyautogui.press('f') # to pay respects
-    number_of_images = len([f for f in os.listdir(averaged_images_directory) if os.path.isfile(os.path.join(averaged_images_directory, f))])
-    time.sleep(1 + (number_of_images * 0.08))
-else:
-    show_error_message("ImageJ is no longer running. Program shutting down.")
-    exit()
+if annotated_list_image_scans:  # Only proceeds if there are items in annotated_list_image_scans
+    if is_imagej_running():     # Making ImageJ the active program
+        print("Sending command to ImageJ to enhance contrast")
+        pyautogui.press('f') # to pay respects
+        number_of_images = len([f for f in os.listdir(averaged_images_directory) if os.path.isfile(os.path.join(averaged_images_directory, f))])
+        time.sleep(1 + (number_of_images * 0.08))
+    else:
+        show_error_message("ImageJ is no longer running. Program shutting down.")
+        exit()
 
 
 # Putting images in subdirectory as specified by user
+# Update: change peripheral folder checkbox to entry box
 subfolder_exists = False    # this is just for the restore_underscore function down below
-for filename in os.listdir(averaged_images_directory):
-    name_elements = filename.split('_')
-    location_name = name_elements[2]
-    if location_name in images_to_put_into_subfolder:
-        subfolder_path = os.path.join(averaged_images_directory, subfolder_name)
-        if not os.path.exists(subfolder_path):
-            os.mkdir(subfolder_path)
-            subfolder_exists = True
-        src_path = os.path.join(averaged_images_directory, filename)
-        dest_path = os.path.join(subfolder_path, filename)
-        os.rename(src_path, dest_path)
+if annotated_list_image_scans:  # Only proceeds if there are items in annotated_list_image_scans
+    for filename in os.listdir(averaged_images_directory):
+        name_elements = filename.split('_')
+        location_name = name_elements[2]
+        if location_name in images_to_put_into_subfolder:
+            subfolder_path = os.path.join(averaged_images_directory, subfolder_name)
+            if not os.path.exists(subfolder_path):
+                os.mkdir(subfolder_path)
+                subfolder_exists = True
+            src_path = os.path.join(averaged_images_directory, filename)
+            dest_path = os.path.join(subfolder_path, filename)
+            os.rename(src_path, dest_path)
 
 # Putting the underscores back in the file names that were removed with remove_underscores()
 def restore_underscores(directory):
@@ -1671,18 +1662,27 @@ def restore_underscores(directory):
         new_path = os.path.join(directory, new_name)
         os.rename(old_path, new_path)
 
-restore_underscores(averaged_images_directory)
+if annotated_list_image_scans:
+    restore_underscores(averaged_images_directory)
 if subfolder_exists:
     restore_underscores(subfolder_path)
-if unaveraged_images is True:
+if annotated_list_image_scans and unaveraged_images is True:
     restore_underscores(unaveraged_images_directory)
 
 
 # Deleting the intermediate directories
 delete_directory(individual_sequence_images_directory)
-annotated_text_file = os.path.join(image_directory, "Annotated_list_of_files.txt")
-if os.path.exists(annotated_text_file):
-    os.remove(annotated_text_file)
+delete_directory(cropped_tif_images_directory)
+if os.path.exists(annotated_volume_text_file):
+    os.remove(annotated_volume_text_file)
+if os.path.exists(annotated_images_text_file):
+    os.remove(annotated_images_text_file)
 if os.path.exists(imagej_settings_file):
     os.remove(imagej_settings_file)
-delete_directory(os.path.join(image_directory, "cropped_tif_images"))
+# Delete the directories if there are no images in them
+if os.path.isdir(unaveraged_images_directory) and not os.listdir(unaveraged_images_directory):
+    os.rmdir(unaveraged_images_directory)
+if os.path.isdir(averaged_images_directory) and not os.listdir(averaged_images_directory):
+    os.rmdir(averaged_images_directory)
+if os.path.isdir(volume_scan_directory) and not os.listdir(volume_scan_directory):
+    os.rmdir(volume_scan_directory)
