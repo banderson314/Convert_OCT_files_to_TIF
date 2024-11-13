@@ -5,13 +5,6 @@
 //For this macro to work, you need the OCT reader plugin and the OCT averager plugin
 
 
-macro "Reinstall this [q]" {
-  run("Install...", "install=[U:/ImageJ/ImageJ/macros/Made_by_Brandon/Open_OCT_file_1.4.ijm]");
-}
-
-macro "Record macro [w]" {
-  run("Record...");
-}
 
 macro "Close all images [e]" {
   close("*");
