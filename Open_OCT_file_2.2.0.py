@@ -1,4 +1,4 @@
-#Open_OCT_file_2.1.1.py
+#Open_OCT_file_2.2.0.py
 #Converting OCT files to tif files
 #Made by Brandon Anderson, University of Pennsylvania
 
@@ -701,9 +701,9 @@ delete_directory(os.path.join(image_directory, "images_to_be_averaged"))
 delete_directory(os.path.join(image_directory, "individual_sequence_images"))
 delete_directory(os.path.join(image_directory, "unaveraged_images"))
 delete_directory(os.path.join(image_directory, "initial_tif_images"))
-delete_directory(os.path.join(image_directory, "initial_avi_videos"))
-if os.path.exists(os.path.join(image_directory, "Annotated_list_of_files_images.txt")):
-    os.remove(os.path.join(image_directory, "Annotated_list_of_files_images.txt"))
+delete_directory(os.path.join(image_directory, "volume_scans"))
+if os.path.exists(os.path.join(image_directory, "Annotated_list_of_images.txt")):
+    os.remove(os.path.join(image_directory, "Annotated_list_of_images.txt"))
 if os.path.exists(os.path.join(image_directory, "Annotated_list_of_volume_scans.txt")):
     os.remove(os.path.join(image_directory, "Annotated_list_of_volume_scans.txt"))
 imagej_settings_file = os.path.join(image_directory, "ImageJ_settings.txt")
@@ -1051,7 +1051,7 @@ for sublist in annotated_list:
 
 # Saving the annotated_list to a txt file in the image directory
 annotated_volume_text_file = os.path.join(image_directory, "Annotated_list_of_volume_scans.txt")
-annotated_images_text_file = os.path.join(image_directory, "Annotated_list_of_files_images.txt")
+annotated_images_text_file = os.path.join(image_directory, "Annotated_list_of_images.txt")
 
 # Open the file in write mode
 with open(annotated_volume_text_file, "w") as file:
@@ -1108,7 +1108,7 @@ def identify_file_locations(preferences_variables, key):
             return handle_key_input(prompt, "file")
 
         elif key == "macro_location":
-            prompt = f"After clicking 'OK,' please select the location of the file called \"Open_OCT_file_imagej_supplement_1.2.\""
+            prompt = f"After clicking 'OK,' please select the location of the file called \"Open_OCT_file_imagej_supplement_1.3.\""
             return handle_key_input(prompt, "file")
 
         return None
@@ -1212,113 +1212,96 @@ time.sleep(0.5)
 
 
 # Press 'a' key to trigger the ImageJ macro that converts OCT images to TIF images
-print("Sending command to ImageJ to convert OCT files to TIF files")
+print("Sending command to ImageJ to convert OCT files")
 pyautogui.press('a')
-start_time = time.time()
 
 time.sleep(2)
 
 # Update: volume scan - update code below to also monitor volume scan folder
-exit()
 
-# Now the program will monitor the conversion of TIF images and will proceed with the rest of the
+
+# Now the program will monitor the conversion of OCT images and will proceed with the rest of the
 # code when the proper amount of images have appeared in the folder
 
-# Define the subdirectory
-initial_tif_images_directory = os.path.join(image_directory, "initial_tif_images")  # This was created in the ImageJ macro
+def monitor_file_creation_in_directory(directory, annotated_list_of_files, file_type):
+    # file_type should be '.tif' or '.avi' or some other similar string
 
-# Count the number of .tif files in the initial_tif_images_directory
-file_count = sum(1 for file in os.listdir(initial_tif_images_directory) if file.endswith('.tif'))
+    # Count the number of file_type files in the directory
+    file_count = 0
 
-# Wait until the count matches the number of sublists in annotated_list
-while file_count != len(annotated_list):    # WARNING: NEED TO CHANGE annotated_list
-    file_count = sum(1 for file in os.listdir(initial_tif_images_directory) if file.endswith('.tif'))
-    time.sleep(0.1)
+    # Wait until the count matches the number of sublists in annotated_list
+    while file_count != len(annotated_list_of_files):
+        file_count = sum(1 for file in os.listdir(directory) if file.endswith(file_type))
+        time.sleep(0.1)
 
-# Reporting that that process is done
-end_time = time.time()
-completion_time = int(end_time - start_time)
-print(f"OCT files converted to TIF images. Time to completion: {completion_time} s")
+# First will monitor the creation of .tif files
+cropped_tif_images_directory = os.path.join(image_directory, "cropped_tif_images") # This was created in the ImageJ macro
+monitor_file_creation_in_directory(cropped_tif_images_directory, annotated_list_image_scans, ".tif")
+print("OCT files converted into TIF files and cropped")
 
+# Then will monitor the creation of .avi files
+volume_scan_directory = os.path.join(image_directory, "volume_scans") # This was created in the ImageJ macro
+monitor_file_creation_in_directory(volume_scan_directory, annotated_list_volume_scans, ".avi")
+print("OCT files converted into AVI files and cropped")
 
-
-# Cropping the TIF images - this is done via ImageJ macro which is triggered by pressing 's'
-if is_imagej_running():     # Making ImageJ the active program
-    print("Sending command to ImageJ to crop TIF images")
-else:
-    show_error_message("ImageJ is no longer running. Program shutting down.")
-    exit()
-
-pyautogui.press('s')
-start_time = time.time()
-time.sleep(1)
-
-# Waiting until the cropping is complete:
-# Define the subdirectory
-subdirectory = "cropped_tif_images" # This was created in the ImageJ macro
-cropped_tif_images_directory = os.path.join(image_directory, subdirectory)
-
-# Count the number of .tif files in the subdirectory
-file_count = sum(1 for file in os.listdir(cropped_tif_images_directory) if file.endswith('.tif'))
-
-# Wait until the count matches the number of sublists in annotated_list     # I don't think this is waiting a proper amount of time. Fix please
-while file_count != len(annotated_list):    # WARNING: NEED TO CHANGE annotated_list
-    file_count = sum(1 for file in os.listdir(cropped_tif_images_directory) if file.endswith('.tif'))
-    time.sleep(0.1)
-
-# Reporting that that process is done
-end_time = time.time()
-completion_time = int(end_time - start_time)
-print(f"TIF images cropped. Time to completion: {completion_time} s")
-
-
-
-delete_directory(initial_tif_images_directory)
+time.sleep(3)   # Give ImageJ time to close out of the image files
 
 
 
 
 
-
-def rename_files(directory, annotated_list):    # This will convert the original file names into what I want the file names to be
+def rename_files(directory, annotated_list, is_volume_scan):    # This will convert the original file names into what I want the file names to be
     file_list = os.listdir(directory)
     file_count = len(file_list)
 
-    for filename in file_list:
-        individual_sequence_file_name = os.path.splitext(filename)[0]
-        individual_sequence_file_name_base = individual_sequence_file_name[:-2]  # Remove the last 2 characters - the image number from the image sequence
+    for file_name_with_extension in file_list:
+        file_name = os.path.splitext(file_name_with_extension)[0]
 
+        if not is_volume_scan:
+            file_name = file_name[:-2]  # Remove the last 2 characters - the image number from the image sequence
+        
         for sublist in annotated_list:
             annotated_file_name = sublist[0]
-            annotated_list_name_without_extension = annotated_file_name[:-4]  # Remove the last 4 characters
+            annotated_list_name_without_extension = annotated_file_name[:-4]  # Remove the last 4 characters (".OCT")
 
-            if individual_sequence_file_name_base == annotated_list_name_without_extension:
+            if file_name == annotated_list_name_without_extension:
                 eye = sublist[1]
                 location = sublist[5]
                 mouse_number = sublist[4]
-                new_name = f"{mouse_number}_{eye}_{location}_{filename[-6:]}"
+
+                if is_volume_scan:
+                    micron_depth = int(crop_amount)
+                    mm_depth = micron_depth / 1000
+                    final_part_of_file_name = f"{mm_depth:.3f}".rstrip('0').rstrip('.') + "mmdepth.avi"     # Reports up to 3 decimal places in name
+                else:   # For non-volume scans we need to keep the last identifier numbers. We'll add "mmdepth" later when averaging
+                    final_part_of_file_name = file_name_with_extension[-6:]
+
+                new_name = f"{mouse_number}_{eye}_{location}_{final_part_of_file_name}"
                 break
-        else:
-            new_name = filename  # Use original filename if no match is found
+            else:
+                new_name = file_name_with_extension  # Use original file_name_with_extension if no match is found
 
         # Construct the full paths for the old and new names
-        old_path = os.path.join(directory, filename)
+        old_path = os.path.join(directory, file_name_with_extension)
         new_path = os.path.join(directory, new_name)
 
         # Rename the file
         os.rename(old_path, new_path)
 
-    print(f"Renamed {file_count} files.")
+    print(f"Renamed {file_count} files in {os.path.basename(directory)}")
 
+for item in annotated_list_volume_scans:
+    print(item)
 
-
-
-# Renaming the individual sequence files
+# Renaming the individual sequence files and volume scan files
 individual_sequence_images_directory = os.path.join(image_directory, "individual_sequence_images") # This was created in the ImageJ macro
-rename_files(individual_sequence_images_directory, annotated_list)    # This will convert the original file names into what I want the file names to be
-    # WARNING: NEED TO CHANGE annotated_list
+rename_files(individual_sequence_images_directory, annotated_list_image_scans, False)    # This will convert the original file names into what I want the file names to be
+rename_files(volume_scan_directory, annotated_list_volume_scans, True)
+
+
 
 # Deleting the unneeded horizontal images
+# Update: more radial scans - pretty sure you need to change this section to be more robust
 def edit_and_delete_sequence_images(directory_path):
     file_list = os.listdir(directory_path)
 
@@ -1587,7 +1570,12 @@ def averaging_images(directory_path, image_directory):
 
 
         old_path = target_file_path
-        file_name = group_files[0][:-6] + "0.48mmdepth.tif"
+
+        micron_depth = int(crop_amount)
+        mm_depth = micron_depth / 1000
+        mmdepth_text = f"{mm_depth:.3f}".rstrip('0').rstrip('.') + "mmdepth"     # Reports up to 3 decimal places in name
+
+        file_name = group_files[0][:-6] + mmdepth_text + ".tif"
         new_path = os.path.join(averaged_images_directory, file_name)
 
         time.sleep(0.5)
@@ -1602,14 +1590,15 @@ def averaging_images(directory_path, image_directory):
 
 
 # Call the averaging_images function
-averaging_images(individual_sequence_images_directory, image_directory)
-time.sleep(1)   # Waiting one second in order to properly delete "rotatedRegAvgImg.tif"
 averaged_images_directory = os.path.join(image_directory, "averaged_images")
-os.remove(os.path.join(averaged_images_directory, "rotatedRegAvgImg.tif"))
+if annotated_list_image_scans:  # Only proceeds if there are items in annotated_list_image_scans
+    averaging_images(individual_sequence_images_directory, image_directory)
+    time.sleep(1)   # Waiting one second in order to properly delete "rotatedRegAvgImg.tif"
+    os.remove(os.path.join(averaged_images_directory, "rotatedRegAvgImg.tif"))
 
 # Creating an unaveraged image folder, if the user specified so
-if unaveraged_images is True:
-    unaveraged_images_directory = os.path.join(image_directory, "unaveraged_images")
+unaveraged_images_directory = os.path.join(image_directory, "unaveraged_images")
+if annotated_list_image_scans and unaveraged_images is True:
     os.makedirs(unaveraged_images_directory, exist_ok=True)
     individual_sequence_files = os.listdir(individual_sequence_images_directory)
     # Group files based on mouse number, eye, and location
@@ -1637,30 +1626,32 @@ if unaveraged_images is True:
 
 
 # Enhancing the contrast of the images
-if is_imagej_running():     # Making ImageJ the active program
-    print("Sending command to ImageJ to enhance contrast")
-    pyautogui.press('f') # to pay respects
-    number_of_images = len([f for f in os.listdir(averaged_images_directory) if os.path.isfile(os.path.join(averaged_images_directory, f))])
-    time.sleep(1 + (number_of_images * 0.08))
-else:
-    show_error_message("ImageJ is no longer running. Program shutting down.")
-    exit()
+if annotated_list_image_scans:  # Only proceeds if there are items in annotated_list_image_scans
+    if is_imagej_running():     # Making ImageJ the active program
+        print("Sending command to ImageJ to enhance contrast")
+        pyautogui.press('f') # to pay respects
+        number_of_images = len([f for f in os.listdir(averaged_images_directory) if os.path.isfile(os.path.join(averaged_images_directory, f))])
+        time.sleep(1 + (number_of_images * 0.08))
+    else:
+        show_error_message("ImageJ is no longer running. Program shutting down.")
+        exit()
 
 
 # Putting images in subdirectory as specified by user
 # Update: change peripheral folder checkbox to entry box
 subfolder_exists = False    # this is just for the restore_underscore function down below
-for filename in os.listdir(averaged_images_directory):
-    name_elements = filename.split('_')
-    location_name = name_elements[2]
-    if location_name in images_to_put_into_subfolder:
-        subfolder_path = os.path.join(averaged_images_directory, subfolder_name)
-        if not os.path.exists(subfolder_path):
-            os.mkdir(subfolder_path)
-            subfolder_exists = True
-        src_path = os.path.join(averaged_images_directory, filename)
-        dest_path = os.path.join(subfolder_path, filename)
-        os.rename(src_path, dest_path)
+if annotated_list_image_scans:  # Only proceeds if there are items in annotated_list_image_scans
+    for filename in os.listdir(averaged_images_directory):
+        name_elements = filename.split('_')
+        location_name = name_elements[2]
+        if location_name in images_to_put_into_subfolder:
+            subfolder_path = os.path.join(averaged_images_directory, subfolder_name)
+            if not os.path.exists(subfolder_path):
+                os.mkdir(subfolder_path)
+                subfolder_exists = True
+            src_path = os.path.join(averaged_images_directory, filename)
+            dest_path = os.path.join(subfolder_path, filename)
+            os.rename(src_path, dest_path)
 
 # Putting the underscores back in the file names that were removed with remove_underscores()
 def restore_underscores(directory):
@@ -1671,19 +1662,27 @@ def restore_underscores(directory):
         new_path = os.path.join(directory, new_name)
         os.rename(old_path, new_path)
 
-restore_underscores(averaged_images_directory)
+if annotated_list_image_scans:
+    restore_underscores(averaged_images_directory)
 if subfolder_exists:
     restore_underscores(subfolder_path)
-if unaveraged_images is True:
+if annotated_list_image_scans and unaveraged_images is True:
     restore_underscores(unaveraged_images_directory)
 
 
 # Deleting the intermediate directories
 delete_directory(individual_sequence_images_directory)
+delete_directory(cropped_tif_images_directory)
 if os.path.exists(annotated_volume_text_file):
     os.remove(annotated_volume_text_file)
 if os.path.exists(annotated_images_text_file):
     os.remove(annotated_images_text_file)
 if os.path.exists(imagej_settings_file):
     os.remove(imagej_settings_file)
-delete_directory(os.path.join(image_directory, "cropped_tif_images"))
+# Delete the directories if there are no images in them
+if os.path.isdir(unaveraged_images_directory) and not os.listdir(unaveraged_images_directory):
+    os.rmdir(unaveraged_images_directory)
+if os.path.isdir(averaged_images_directory) and not os.listdir(averaged_images_directory):
+    os.rmdir(averaged_images_directory)
+if os.path.isdir(volume_scan_directory) and not os.listdir(volume_scan_directory):
+    os.rmdir(volume_scan_directory)
