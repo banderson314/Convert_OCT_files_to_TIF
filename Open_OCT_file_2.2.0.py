@@ -1290,8 +1290,7 @@ def rename_files(directory, annotated_list, is_volume_scan):    # This will conv
 
     print(f"Renamed {file_count} files in {os.path.basename(directory)}")
 
-for item in annotated_list_volume_scans:
-    print(item)
+
 
 # Renaming the individual sequence files and volume scan files
 individual_sequence_images_directory = os.path.join(image_directory, "individual_sequence_images") # This was created in the ImageJ macro
