@@ -1,5 +1,5 @@
-#Open_OCT_file_2.2.0.py
-#Converting OCT files to tif files
+#Open_OCT_file_2.2.2.py
+#Converting OCT files to tif and avi files
 #Made by Brandon Anderson, University of Pennsylvania
 
 #For this macro to work, you need the following files:
@@ -15,8 +15,9 @@ import shutil       # For deleting directories
 import pygetwindow as gw    #for making ImageJ an active window
 import tkinter as tk    # For making dialog boxes
 import tkinter.messagebox as messagebox
-from tkinter import ttk, filedialog, messagebox
+from tkinter import ttk, filedialog, messagebox, simpledialog
 import inspect      # For error messages
+import ast          # For converting variables in text file to proper variable formats
 
 # You will need to make sure to download psutil, pyautogui, and pygetwindow as they don't come with base Python
 
@@ -136,72 +137,37 @@ def retrieve_variables(preferences_variables, key):
     try:
         return preferences_variables[key]
     except KeyError:        # If these variables don't exist in the document, here are the defaults
-        if key == "image_location_list":
-            return ["central", "temporal", "nasal", "superior", "inferior"]
-        elif key == "od_before_os":
-            return True
-        elif key == "scan_modes":
-            return ['radial', 'linear', 'linear', 'radial', 'radial']
-        # Update: change peripheral folder checkbox to entry box
-        elif key == "subfolder_entry":
-            return [False, True, True, True, True]
-        # Update: change peripheral folder checkbox to entry box
-        elif key == "subfolder_name":
-            return "Peripheral images"
-        elif key == "horizontal_image_list":
-            return ["horizontal", "", "", "", ""]
-        elif key == "vertical_image_list":
-            return ["vertical", "", "", "superior", "inferior"]
-        elif key == "unaveraged_images":
-            return False
-        elif key == "min_contrast":
-            return "25"
-        elif key == "max_contrast":
-            return "215"
-        elif key == "crop_amount":
-            return "480"
-        
+        if key == "preset_options_dict":
+            return {"Previous settings": {"default_locations": ["horizontal, vertical", "temporal", "nasal", "delete, superior", "delete, inferior"], "default_scan_type": ["radial", "linear", "linear", "radial", "radial"], "default_subfolder": [False, True, True, True, True], "default_min_contrast": 25, "default_max_contrast": 215, "default_crop_amount": 480, "default_subfolder_name": "Peripheral images", "od_os_checkbox_boolean": True, "imagej_checkbox_boolean": False, "unaveraged_checkbox_boolean": False}}
 
 
-image_location_list = retrieve_variables(preferences_variables, 'image_location_list')
-od_before_os = retrieve_variables(preferences_variables, 'od_before_os')
-scan_modes = retrieve_variables(preferences_variables, 'scan_modes')
-subfolder_entry = retrieve_variables(preferences_variables, 'subfolder_entry')
-subfolder_name = retrieve_variables(preferences_variables, 'subfolder_name')
-horizontal_image_list = retrieve_variables(preferences_variables, 'horizontal_image_list')
-vertical_image_list = retrieve_variables(preferences_variables, 'vertical_image_list')
-unaveraged_images = retrieve_variables(preferences_variables, 'unaveraged_images')
-min_contrast = retrieve_variables(preferences_variables, 'min_contrast')
-max_contrast = retrieve_variables(preferences_variables, 'max_contrast')
-crop_amount = retrieve_variables(preferences_variables, "crop_amount")
+
+preset_options_dict = retrieve_variables(preferences_variables, 'preset_options_dict')
+if type(preset_options_dict) == str:
+    preset_options_dict = ast.literal_eval(preset_options_dict)
 
 
-# Converting str to whatever it actually is, since only strings come from the txt file
-if type(image_location_list) == str:
-    image_location_list = eval(image_location_list)
-if type(od_before_os) == str:
-    od_before_os = eval(od_before_os)
-if type(unaveraged_images) == str:
-    unaveraged_images = eval(unaveraged_images)
-if type(scan_modes) == str:
-    scan_modes = eval(scan_modes)
-if type(subfolder_entry) == str:
-    subfolder_entry = eval(subfolder_entry)
-if type(horizontal_image_list) == str:
-    horizontal_image_list = eval(horizontal_image_list)
-if type(vertical_image_list) == str:
-    vertical_image_list = eval(vertical_image_list)
+image_location_list = preset_options_dict["Previous settings"]["default_locations"]
+od_before_os = preset_options_dict["Previous settings"]["od_os_checkbox_boolean"]
+scan_modes = preset_options_dict["Previous settings"]["default_scan_type"]
+subfolder_entry = preset_options_dict["Previous settings"]["default_subfolder"]
+subfolder_name = preset_options_dict["Previous settings"]["default_subfolder_name"]
+unaveraged_images = preset_options_dict["Previous settings"]["unaveraged_checkbox_boolean"]
+min_contrast = preset_options_dict["Previous settings"]["default_min_contrast"]
+max_contrast = preset_options_dict["Previous settings"]["default_max_contrast"]
+crop_amount = preset_options_dict["Previous settings"]["default_crop_amount"]
+
 
 
 
 
 #This first dialog box checks to see what images were taken and in which order
-def location_input_dialog_box():
+def first_dialog_box():
     row_num = 1 # Starting row number for entry and checkbox widgets
 
     def add_entry_row(mode="linear", subfolder_mode=False):
         nonlocal row_num
-        entry_row = tk.Entry(dialog_frame)
+        entry_row = tk.Entry(dialog_frame, width=50)
         entry_row.grid(row=row_num, column=0, sticky='w')
         entry_rows.append(entry_row)
 
@@ -225,22 +191,11 @@ def location_input_dialog_box():
         checkbox_volumes.append(checkbox_volume)
 
 
-        # Adding the horizontal and vertical entry boxes
-        entry_horizontal = tk.Entry(dialog_frame)
-        entry_horizontal.grid(row=row_num, column=4, sticky='w')
-        entry_horizontals.append(entry_horizontal)
-
-        entry_vertical = tk.Entry(dialog_frame)
-        entry_vertical.grid(row=row_num, column=5, sticky='w')
-        entry_verticals.append(entry_vertical)
-        if mode != "radial":
-            entry_horizontal.config(state='disabled')
-            entry_vertical.config(state='disabled')
 
         # Adding subfolder checkboxes
         subfolder_var = tk.BooleanVar(value=subfolder_mode)
         checkbox_subfolder = tk.Checkbutton(dialog_frame, variable=subfolder_var)
-        checkbox_subfolder.grid(row=row_num, column=6, sticky='s')
+        checkbox_subfolder.grid(row=row_num, column=4, sticky='s')
         checkbox_subfolders.append(checkbox_subfolder)
         subfolder_vars.append(subfolder_var)
         # Update: change peripheral folder checkbox to entry box
@@ -268,12 +223,7 @@ def location_input_dialog_box():
             checkbox_volume = checkbox_volumes.pop()
             checkbox_volume.destroy()
 
-            # Remove the corresponding horizontal and vertical entry boxes from the lists and destroy them
-            entry_horizontal = entry_horizontals.pop()
-            entry_horizontal.destroy()
 
-            entry_vertical = entry_verticals.pop()
-            entry_vertical.destroy()
 
             # Update: change peripheral folder checkbox to entry box
             checkbox_subfolder = checkbox_subfolders.pop()
@@ -289,56 +239,46 @@ def location_input_dialog_box():
         linear_vars[index].set(True)
         radial_vars[index].set(False)
         volume_vars[index].set(False)
-        entry_horizontals[index].delete(0, tk.END)
-        entry_verticals[index].delete(0, tk.END)
-        entry_horizontals[index].config(state='disabled')
-        entry_verticals[index].config(state='disabled')
+
 
     def select_radial(index):
         linear_vars[index].set(False)
         radial_vars[index].set(True)
         volume_vars[index].set(False)
-        entry_horizontals[index].config(state='normal')
-        entry_verticals[index].config(state='normal')
 
     def select_volume(index):
         linear_vars[index].set(False)
         radial_vars[index].set(False)
         volume_vars[index].set(True)
-        entry_horizontals[index].delete(0, tk.END)
-        entry_verticals[index].delete(0, tk.END)
-        entry_horizontals[index].config(state='disabled')
-        entry_verticals[index].config(state='disabled')
 
 
-    def restore_defaults():
+    def set_new_preset(preset_option):
         # Update: custom defaults - need to define at function that sees user settings (much earlier in code)
-        default_values = ["central", "temporal", "nasal", "superior", "inferior"]
-        default_horizontal = ["horizontal", "", "", "", ""]
-        default_scan_type = ["radial", "linear", "linear", "radial", "radial"]
-        default_vertical = ["vertical", "", "", "superior", "inferior"]
-        default_subfolder = [False, True, True, True, True]
-        default_min_contrast = 25   # Update: other - need to define this at beginning
-        default_max_contrast = 215  # Update: other - need to define this at beginning
-        default_crop_amount = 480  # Update: other - need to define this at beginning
-        default_subfolder_name = "Peripheral images"
-        current_row_count = len(entry_rows)
-        od_os_checkbox_boolean = True
-        imagej_checkbox_boolean = False
-        unaveraged_checkbox_boolean = False
+        default_locations = preset_options_dict[preset_option]["default_locations"]
+        default_scan_type = preset_options_dict[preset_option]["default_scan_type"]
+        default_subfolder = preset_options_dict[preset_option]["default_subfolder"]
+        default_min_contrast = preset_options_dict[preset_option]["default_min_contrast"]
+        default_max_contrast = preset_options_dict[preset_option]["default_max_contrast"]
+        default_crop_amount = preset_options_dict[preset_option]["default_crop_amount"]
+        default_subfolder_name = preset_options_dict[preset_option]["default_subfolder_name"]
+        od_os_checkbox_boolean = preset_options_dict[preset_option]["od_os_checkbox_boolean"]
+        imagej_checkbox_boolean = preset_options_dict[preset_option]["imagej_checkbox_boolean"]
+        unaveraged_checkbox_boolean = preset_options_dict[preset_option]["unaveraged_checkbox_boolean"]
 
+        current_row_count = len(entry_rows)
+        
         # If the current number of rows is less than five, add new rows
-        while current_row_count < 5:
+        while current_row_count < len(default_locations):
             add_entry_row()
             current_row_count += 1
 
         # If the current number of rows is more than five, remove excess rows
-        while current_row_count > 5:
+        while current_row_count > len(default_locations):
             remove_entry_row()
             current_row_count -= 1
 
         # Update the content of the first column with default values
-        for i, default_value in enumerate(default_values):
+        for i, default_value in enumerate(default_locations):
             entry_row = entry_rows[i]
             entry_row.delete(0, tk.END)  # Clear the current content
             entry_row.insert(tk.END, default_value)  # Set the default value
@@ -349,16 +289,6 @@ def location_input_dialog_box():
             elif mode == "linear": select_linear(i)
             elif mode == "volume": select_volume(i)
 
-        # Set the horizontal and vertical entry boxes with default values
-        for i, default_value in enumerate(default_horizontal):
-            entry_horizontal = entry_horizontals[i]
-            entry_horizontal.delete(0, tk.END)
-            entry_horizontal.insert(tk.END, default_value)
-
-        for i, default_value in enumerate(default_vertical):
-            entry_vertical = entry_verticals[i]
-            entry_vertical.delete(0, tk.END)
-            entry_vertical.insert(tk.END, default_value)
 
         # Set the checkboxes in the fifth column based on default
         # Update: change peripheral folder checkbox to entry box
@@ -385,15 +315,120 @@ def location_input_dialog_box():
         crop_amount_entry.delete(0, tk.END)
         crop_amount_entry.insert(0, default_crop_amount)
 
+    def update_dropdown(new_selected_preset):
+        # Update the preset dropdown menu to reflect changes in preset_options_dict when a new preset is created or deleted
+        menu = preset_options_dropdown_menu['menu']
+        menu.delete(0, 'end')  # Clear the existing menu options
+
+        # Add updated options from preset_options_dict
+        for option in preset_options_dict.keys():
+            menu.add_command(
+                label=option,
+                command=lambda value=option: (selected_preset.set(value), set_new_preset(value))
+            )
+
+        # Update the displayed value
+        selected_preset.set(new_selected_preset)
+
+
+    def create_new_preset():
+        # Gets the current information
+        image_location_list = []
+        scan_modes = []
+        subfolder_entry = []
+
+        for i, entry_row in enumerate(entry_rows):
+            text = entry_row.get()
+            if text:
+                image_location_list.append(text)
+
+            if linear_vars[i].get():
+                scan_modes.append("linear")
+            elif radial_vars[i].get():
+                scan_modes.append("radial")
+            elif volume_vars[i].get():
+                scan_modes.append("volume")
+            else:
+                scan_modes.append("")
+
+            subfolder_entry.append(subfolder_vars[i].get())
+
+        od_before_os = od_os_checkbox_var.get()
+        subfolder_name = subfolder_name_entry.get()
+        unaveraged_images = unaveraged_checkbox_var.get()
+        min_contrast = min_contrast_var.get()
+        max_contrast = max_contrast_var.get()
+        crop_amount = crop_amount_var.get()
+
+        # Asks the user to give the preset a new name
+        new_preset_name = simpledialog.askstring("Preset", "New preset name:")
+
+        if new_preset_name:
+            new_preset_details = {
+                "default_locations": image_location_list,
+                "default_scan_type": scan_modes,
+                "default_subfolder": subfolder_entry,
+                "default_min_contrast": min_contrast,
+                "default_max_contrast": max_contrast,
+                "default_crop_amount": crop_amount,
+                "default_subfolder_name": subfolder_name,
+                "od_os_checkbox_boolean": od_before_os,
+                "imagej_checkbox_boolean": False,
+                "unaveraged_checkbox_boolean": unaveraged_images
+            }
+            preset_options_dict[new_preset_name] = new_preset_details
+            
+            # Read the preference txt file and replace the line
+            with open(preference_file, 'r') as file:
+                lines = file.readlines()
+
+            # Replace the preset_options_dict line
+            for i, line in enumerate(lines):
+                if line.strip().startswith("preset_options_dict"):
+                    lines[i] = f"preset_options_dict = {preset_options_dict}" + "\n"
+                    break
+
+            # Write the modified lines back to the file
+            with open(preference_file, 'w') as file:
+                file.writelines(lines)
+
+            # Update the dropdown menu with the new preset
+            update_dropdown(new_preset_name)
+
+            print(f"Created {new_preset_name}")
+
+
+            
+    def delete_preset():
+        current_preset = selected_preset.get()
+        if current_preset != "Previous settings":
+            del preset_options_dict[current_preset]
+
+            # Read the preference txt file and replace the line
+            with open(preference_file, 'r') as file:
+                lines = file.readlines()
+
+            # Replace the preset_options_dict line
+            for i, line in enumerate(lines):
+                if line.strip().startswith("preset_options_dict"):
+                    lines[i] = f"preset_options_dict = {preset_options_dict}" + "\n"
+                    break
+
+            # Write the modified lines back to the file
+            with open(preference_file, 'w') as file:
+                file.writelines(lines)
+
+            # Update the dropdown menu with the new preset
+            update_dropdown("")
+
+            print(f"Deleted {current_preset}")
 
     def confirm(event=None):
-        global image_location_list, od_before_os, scan_modes, subfolder_entry, subfolder_name, horizontal_image_list, vertical_image_list, unaveraged_images, min_contrast, max_contrast, crop_amount
+        global image_location_list, od_before_os, scan_modes, subfolder_entry, subfolder_name, unaveraged_images, min_contrast, max_contrast, crop_amount
         
         image_location_list = []
         scan_modes = []
         subfolder_entry = []
-        horizontal_image_list = []
-        vertical_image_list = []
 
         for i, entry_row in enumerate(entry_rows):
             text = entry_row.get()
@@ -412,19 +447,6 @@ def location_input_dialog_box():
             subfolder_entry.append(subfolder_vars[i].get())
             # Update: change peripheral folder checkbox to entry box
 
-        for i, entry_horizontal in enumerate(entry_horizontals):
-            text = entry_horizontal.get()
-            if text:
-                horizontal_image_list.append(text)
-            else:
-                horizontal_image_list.append("")
-
-        for i, entry_vertical in enumerate(entry_verticals):
-            text = entry_vertical.get()
-            if text:
-                vertical_image_list.append(text)
-            else:
-                vertical_image_list.append("")
 
         od_before_os = od_os_checkbox_var.get()
         # Update: extra options dialog box - change line:
@@ -441,47 +463,49 @@ def location_input_dialog_box():
         window.master.destroy()
 
 
+
+        preset_options_dict["Previous settings"]["default_locations"] = image_location_list
+        preset_options_dict["Previous settings"]["default_scan_type"] = scan_modes
+        preset_options_dict["Previous settings"]["default_subfolder"] = subfolder_entry
+        preset_options_dict["Previous settings"]["default_min_contrast"] = min_contrast
+        preset_options_dict["Previous settings"]["default_max_contrast"] = max_contrast
+        preset_options_dict["Previous settings"]["default_crop_amount"] = crop_amount
+        preset_options_dict["Previous settings"]["default_subfolder_name"] = subfolder_name
+        preset_options_dict["Previous settings"]["od_os_checkbox_boolean"] = od_before_os
+        preset_options_dict["Previous settings"]["imagej_checkbox_boolean"] = False
+        preset_options_dict["Previous settings"]["unaveraged_checkbox_boolean"] = unaveraged_images
+
+
         # Removing variables that will be replaced
         with open(preference_file, 'r') as file:
             file_content = file.read()
         file_content = file_content.replace("\n\n\n", "\n") # Making sure we're not just adding a ton of extra lines over time
         variables_to_replace = [
+            "preset_options_dict",
             "image_location_list",
             "od_before_os",
             "scan_modes",
             "subfolder_entry",
             "subfolder_name",
-            "horizontal_image_list",
-            "vertical_image_list",
             "unaveraged_images",
             "min_contrast",
             "max_contrast",
             "crop_amount",
         ]
-        lines = [line for line in file_content.splitlines() if not any(line.startswith(variable) for variable in variables_to_replace)]
+        lines_not_to_be_replaced = [line for line in file_content.splitlines() if not any(line.startswith(variable) for variable in variables_to_replace)]
         if imageJ_location_reenter == True:
             # Update: extra options dialog box - probably move this to wherever it is
             shortened_lines = []
-            for i in lines:
+            for i in lines_not_to_be_replaced:
                 if not (i.startswith("screenshot_directory") or i.startswith("macro_location") or i.startswith("imagej_location")):
                     shortened_lines.append(i)
-            lines = shortened_lines
+            lines_not_to_be_replaced = shortened_lines
 
         # Saving the user's inputs for future uses
         with open(preference_file, 'w') as file:
-            file.write('\n'.join(lines))
-            file.write(f"\nimage_location_list = {image_location_list}")
-            file.write(f"\nod_before_os = {od_before_os}")
-            file.write(f"\nscan_modes = {scan_modes}")
-            # Update: change peripheral folder checkbox to entry box - next two lines
-            file.write(f"\nsubfolder_entry = {subfolder_entry}")
-            file.write(f"\nsubfolder_name = {subfolder_name}")
-            file.write(f"\nhorizontal_image_list = {horizontal_image_list}")
-            file.write(f"\nvertical_image_list = {vertical_image_list}")
-            file.write(f"\nunaveraged_images = {unaveraged_images}")
-            file.write(f"\nmin_contrast = {min_contrast}")
-            file.write(f"\nmax_contrast = {max_contrast}")
-            file.write(f"\ncrop_amount = {crop_amount}")
+            file.write('\n'.join(lines_not_to_be_replaced))
+            file.write(f"\npreset_options_dict = {preset_options_dict}")
+
 
 
     def on_dialog_close(event=None):
@@ -494,7 +518,8 @@ def location_input_dialog_box():
     window.title("Image settings")
     window.protocol("WM_DELETE_WINDOW", on_dialog_close)
 
-    instructions_label = tk.Label(window, text="Please enter the order that the images were taken in and what scan mode was used. If radial\nscans were used, record what the horizontal and vertical images represent. If this is not\nprovided for the radial images, then the image will not be processed. These will be used for the\nfile name.", justify='left')
+    instruction_text = "Please enter the order that the images were taken in and what scan mode was used. These will be used for the file name. If you enter 'delete' for any location those images will be deleted. If radial scans are used, in the location box separate out the different images with a comma and space (i.e. angle0, angle90)."
+    instructions_label = tk.Label(window, text= instruction_text, wraplength=475, justify='left')
     instructions_label.grid(padx=10, sticky='w')
 
     dialog_frame = tk.Frame(window)
@@ -507,8 +532,6 @@ def location_input_dialog_box():
     checkbox_linears = []
     checkbox_radials = []
     checkbox_volumes = []
-    entry_horizontals = []
-    entry_verticals = []
     subfolder_vars = []
     checkbox_subfolders = []
 
@@ -522,12 +545,8 @@ def location_input_dialog_box():
     label_radial.grid(row=0, column=2)
     label_volume = tk.Label(dialog_frame, text="volume")
     label_volume.grid(row=0, column=3)
-    label_horizontal = tk.Label(dialog_frame, text="horizontal")
-    label_horizontal.grid(row=0, column=4, sticky='s')
-    label_vertical = tk.Label(dialog_frame, text="vertical")
-    label_vertical.grid(row=0, column=5, sticky='s')
     label_subfolder = tk.Label(dialog_frame, text="subfolder")
-    label_subfolder.grid(row=0, column=6)
+    label_subfolder.grid(row=0, column=4)
 
 
 
@@ -540,37 +559,35 @@ def location_input_dialog_box():
         entry_row = entry_rows[-1]
         entry_row.insert(tk.END, location)
 
-        # Access entry_horizontal and entry_vertical from the lists
-        entry_horizontal = entry_horizontals[-1]
-        entry_vertical = entry_verticals[-1]
-        entry_horizontal.insert(tk.END, horizontal_image_list[i])
-        entry_vertical.insert(tk.END, vertical_image_list[i])
-        if scan_modes[i] != "radial":
-            entry_horizontals[i].config(state='disabled')
-            entry_verticals[i].config(state='disabled')
-
-        row_num += 1
 
 
+
+    row_num += 1
     button_frame = tk.Frame(window)
-    button_frame.grid()
+    button_frame.grid(row=row_num)
     add_button = tk.Button(button_frame, text="+", command=add_entry_row)
     add_button.pack(side='right')
     remove_button = tk.Button(button_frame, text="-", command=remove_entry_row)
     remove_button.pack(side='left')
+    row_num += 1
+
 
     od_os_checkbox_var = tk.BooleanVar(value=od_before_os)
     od_os_checkbox = tk.Checkbutton(window, text="OD eyes were imaged before OS eyes", variable=od_os_checkbox_var)
-    od_os_checkbox.grid(padx=10, sticky='w')
+    od_os_checkbox.grid(row=row_num, padx=10, sticky='w')
+    row_num += 1
 
     # Update: custom defaults - make this part of a separate dialog box (or honestly make it a button)
     imagej_checkbox_var = tk.BooleanVar(value=False)
     imagej_checkbox = tk.Checkbutton(window, text="Re-enter ImageJ file location", variable=imagej_checkbox_var)
     imagej_checkbox.grid(padx=10, sticky='w')
+    row_num += 1
 
     unaveraged_checkbox_var = tk.BooleanVar(value=unaveraged_images)
     unaveraged_checkbox = tk.Checkbutton(window, text="Save a copy of the unaveraged images", variable=unaveraged_checkbox_var)
-    unaveraged_checkbox.grid(padx=10, sticky='w')
+    unaveraged_checkbox.grid(row=row_num, padx=10, sticky='w')
+    row_num += 1
+    
 
     # Getting user input on subfolder name
     # Update: change peripheral folder checkbox to entry box - replace with text that says how many subfolders will be made
@@ -612,16 +629,34 @@ def location_input_dialog_box():
     crop_unit_label = tk.Label(crop_amount_frame, text="µm")
     crop_unit_label.grid(row=0, column=2)
     row_num += 1
-    
 
-    # Creating "Restore defaults" and "Confirm" buttons at the bottom of the screen
+    # Creating preset setting dropdown menu
+    presets_frame = tk.Frame(window)
+    presets_frame.grid(row=row_num, column=0, sticky='w', padx=10)
+    preset_label = tk.Label(presets_frame, text = "Preset options: ")
+    preset_label.grid(row=0, column=0)
+    selected_preset = tk.StringVar(value="Previous settings")
+    preset_options_dropdown_menu = ttk.OptionMenu(
+        presets_frame,
+        selected_preset,
+        selected_preset.get(),
+        *preset_options_dict.keys(),
+        command=lambda _: set_new_preset(selected_preset.get())
+    )
+    preset_options_dropdown_menu.grid(row=0, column=1)
+    create_preset_button = tk.Button(presets_frame, text="Create preset", command=create_new_preset)
+    create_preset_button.grid(row=0, column=2)
+    delete_preset_button = tk.Button(presets_frame, text="Delete preset", command=delete_preset)
+    delete_preset_button.grid(row=0, column=3)
+
+
+    # Creating "Confirm" button at the bottom of the screen
     # Update: custom defaults - include button "Options"
     button_frame = tk.Frame(window)
     button_frame.grid()
-    restore_button = tk.Button(button_frame, text="Restore defaults", command=restore_defaults)
-    restore_button.pack(side='left', pady=10)
     confirm_button = tk.Button(button_frame, text="Confirm", command=confirm)
-    confirm_button.pack(side='right', pady=10, padx=10)
+    confirm_button.pack(pady=10, padx=10)
+
 
 
     window.bind("<Escape>", on_dialog_close)
@@ -632,13 +667,12 @@ def location_input_dialog_box():
     window.grab_set()
 
     # Center the window on the screen
-    window.after(10, lambda: center_dialog_box(window))
-    # Update: other. Do we have to have this delayed? ^
+    window.after(1, lambda: center_dialog_box(window))
 
     window.mainloop()
 
 # Starting up the initial dialog box
-location_input_dialog_box()
+first_dialog_box()
 
 
 print("image_location_list:", image_location_list)
@@ -648,8 +682,6 @@ print("scan_modes:", scan_modes)
 # Update: change peripheral folder checkbox to entry box - this should be a list, not a boolean
 print("subfolder_entry:", subfolder_entry)
 print("subfolder_name:", subfolder_name)
-print("horizontal_image_list:", horizontal_image_list)
-print("vertical_image_list:", vertical_image_list)
 print("min_contrast:", min_contrast)
 print("max_contrast:", max_contrast)
 print("crop_amount:", crop_amount)
@@ -659,7 +691,7 @@ def remove_underscores(list):       # This needs to be done because I count unde
     for i, item in enumerate(list):
         list[i] = item.replace("_", "underscore")
 
-underscore_list = [image_location_list, horizontal_image_list, vertical_image_list]
+underscore_list = [image_location_list] # Previously also had horizontal_image_list, vertical_image_list. Leaving as is in case need to clean any other list
 for list in underscore_list:
     remove_underscores(list)
 
@@ -669,10 +701,7 @@ images_to_put_into_subfolder = []
 for i, image_type in enumerate(image_location_list):
     if subfolder_entry[i] is True:
         images_to_put_into_subfolder.append(image_type)
-        if horizontal_image_list[i] != "":
-            images_to_put_into_subfolder.append(horizontal_image_list[i])
-        if vertical_image_list[i] != "":
-            images_to_put_into_subfolder.append(vertical_image_list[i])
+
 
 
 #SELECTING THE DIRECTORY
@@ -716,22 +745,22 @@ with open(imagej_settings_file, "w") as file:
     file.write(f"{crop_amount}\n{min_contrast}\n{max_contrast}\n")
 
 
-#PUTTING FILE NAMES TOGETHER IN LIST
+# PUTTING FILE NAMES TOGETHER IN LIST
 # Retrieve all file names in the directory
 fileNames = [file for file in os.listdir(image_directory) if os.path.isfile(os.path.join(image_directory, file))]
 
 # Update: volume scan - removed <and name.split("_")[2] != "V">
 filteredFiles = [name for name in fileNames if name.endswith(".OCT") and "RegAvg" not in name]  #Removing any files that contain "RegAvg" and aren't .OCT
 
-#Checking to make sure all images are from the same date and experiment
+# Checking to make sure all images are from the same date and experiment
 # Update: handle multiple experiments from one date
-experimentDate = filteredFiles[0].split("_")[0]
+experiment_date = filteredFiles[0].split("_")[0]
 for file_name in filteredFiles:
-    if file_name.split("_")[0] != experimentDate:
+    if file_name.split("_")[0] != experiment_date:
         messagebox.showerror("Error", "You must only use images from one date.\n\nIf multiple experiments were done on that date, you can only process one experiment at a time.\n\nYour image files start with the date followed by a number (e.g. 2023-05-08-001). The number and date has to be the same for all files.")
         exit()
 
-#Extracting info from the file names
+# Extracting info from the file names
 annotated_list = [
     [
         file_name,
@@ -741,7 +770,7 @@ annotated_list = [
     ]
     for file_name in filteredFiles
 ]
-#Format: [file name, eye, image type, identifying number]
+# Format: [file name, eye, image type, identifying number]
 for sublist in annotated_list:   #interpreting what the image type is
     if sublist[2] == "R":
         sublist[2] = "radial"
@@ -768,7 +797,6 @@ for sublist in annotated_list:
     previousEye = currentEye
 
 number_of_mice = mouseNumber
-print(number_of_mice)
 
 #Next we will identify the location based off of the image type and order it appears in
 previousEye = None
@@ -784,6 +812,7 @@ for sublist in annotated_list:
         sublist.append("")
     image_count_for_eye += 1
     previousEye = currentEye
+
 
 
 #Figuring out how many images each mouse/eye has
@@ -921,7 +950,7 @@ for number in inputted_mouse_numbers:
     mouse_number_dict[i] = number
     i += 1
 
-#Revising the annotatedList to include the real mouse numbers (or blanks if that was what was provided)
+#Revising the annotated_list to include the real mouse numbers (or blanks if that was what was provided)
 for sublist in annotated_list:
     newNumber = mouse_number_dict.get(sublist[4], "dialogBoxError")
     sublist[4] = newNumber
@@ -1048,6 +1077,8 @@ for sublist in annotated_list:
         annotated_list_volume_scans.append(sublist)
     else:
         annotated_list_image_scans.append(sublist)
+
+
 
 # Saving the annotated_list to a txt file in the image directory
 annotated_volume_text_file = os.path.join(image_directory, "Annotated_list_of_volume_scans.txt")
@@ -1208,8 +1239,11 @@ wait_to_appear(os.path.join(screenshot_directory, "select_the_location_of_the_im
 
 pyautogui.typewrite(image_directory, interval=0.01)
 pyautogui.press('enter')
-time.sleep(0.5)
+time.sleep(2)
 
+
+# Making sure ImageJ is the active program still
+is_imagej_running()
 
 # Press 'a' key to trigger the ImageJ macro that converts OCT images to TIF images
 print("Sending command to ImageJ to convert OCT files")
@@ -1217,7 +1251,6 @@ pyautogui.press('a')
 
 time.sleep(2)
 
-# Update: volume scan - update code below to also monitor volume scan folder
 
 
 # Now the program will monitor the conversion of OCT images and will proceed with the rest of the
@@ -1253,28 +1286,62 @@ time.sleep(3)   # Give ImageJ time to close out of the image files
 def rename_files(directory, annotated_list, is_volume_scan):    # This will convert the original file names into what I want the file names to be
     file_list = os.listdir(directory)
     file_count = len(file_list)
+    
+    # Determine the number of scans per image, if it isn't a volume scan
+    number_of_images_in_scan = {}
+    if not is_volume_scan:
+        for file in file_list:
+            base_name = file[:-8]   # Excludes the 4-digit image sequence number and ".tif"
+            if base_name in number_of_images_in_scan:
+                number_of_images_in_scan[base_name] += 1
+            else:
+                number_of_images_in_scan[base_name] = 1
+
+    # Function to determine which of the location names within a radial scan to apply to a given image
+    def determine_radial_scan_location_name(name_with_sequence_number, location):
+        base_name = name_with_sequence_number[:-4]
+        sequence_number = int(name_with_sequence_number[-4:])
+        number_of_images = number_of_images_in_scan[base_name]
+        
+        location_list = location.split(", ")
+
+        images_per_scan = number_of_images // len(location_list)
+        scan_index = sequence_number // images_per_scan  # integer division to find the scan index
+        specific_radial_image_location = location_list[scan_index]  # Get the corresponding scan name from the list
+
+        return specific_radial_image_location
+
+
 
     for file_name_with_extension in file_list:
-        file_name = os.path.splitext(file_name_with_extension)[0]
+        file_name_without_extension = os.path.splitext(file_name_with_extension)[0]
 
         if not is_volume_scan:
-            file_name = file_name[:-2]  # Remove the last 2 characters - the image number from the image sequence
+            file_name_with_sequence_number = file_name_without_extension
+            file_name_without_sequence_number = file_name_without_extension[:-4]  # Remove the last 4 characters - the image number from the image sequence
+        else:
+            file_name_without_sequence_number = file_name_without_extension   # Volume scans don't have the sequence number attached
         
         for sublist in annotated_list:
             annotated_file_name = sublist[0]
             annotated_list_name_without_extension = annotated_file_name[:-4]  # Remove the last 4 characters (".OCT")
 
-            if file_name == annotated_list_name_without_extension:
+            if file_name_without_sequence_number == annotated_list_name_without_extension:
                 eye = sublist[1]
                 location = sublist[5]
                 mouse_number = sublist[4]
+                scan_type = sublist[2]
 
-                if is_volume_scan:
+                if scan_type == 'radial':
+                    location = determine_radial_scan_location_name(file_name_with_sequence_number, location)
+
+                # Figuring out the last part of the renamed file name
+                if scan_type == 'volume':
                     micron_depth = int(crop_amount)
                     mm_depth = micron_depth / 1000
                     final_part_of_file_name = f"{mm_depth:.3f}".rstrip('0').rstrip('.') + "mmdepth.avi"     # Reports up to 3 decimal places in name
                 else:   # For non-volume scans we need to keep the last identifier numbers. We'll add "mmdepth" later when averaging
-                    final_part_of_file_name = file_name_with_extension[-6:]
+                    final_part_of_file_name = file_name_with_extension[-8:] # includes the 4 sequence numbers and the ".tif"
 
                 new_name = f"{mouse_number}_{eye}_{location}_{final_part_of_file_name}"
                 break
@@ -1285,119 +1352,19 @@ def rename_files(directory, annotated_list, is_volume_scan):    # This will conv
         old_path = os.path.join(directory, file_name_with_extension)
         new_path = os.path.join(directory, new_name)
 
-        # Rename the file
-        os.rename(old_path, new_path)
+        # Rename the file if the location isn't "delete"
+        if location == "delete":
+            os.remove(old_path)
+        else:
+            os.rename(old_path, new_path)
 
-    print(f"Renamed {file_count} files in {os.path.basename(directory)}")
-
+    print(f"Renamed and/or deleted {file_count} files in {os.path.basename(directory)}")
 
 
 # Renaming the individual sequence files and volume scan files
 individual_sequence_images_directory = os.path.join(image_directory, "individual_sequence_images") # This was created in the ImageJ macro
 rename_files(individual_sequence_images_directory, annotated_list_image_scans, False)    # This will convert the original file names into what I want the file names to be
 rename_files(volume_scan_directory, annotated_list_volume_scans, True)
-
-
-
-# Deleting the unneeded horizontal images
-# Update: more radial scans - pretty sure you need to change this section to be more robust
-def edit_and_delete_sequence_images(directory_path):
-    file_list = os.listdir(directory_path)
-
-    # Group files based on mouse number, eye, and location
-    groups = {}
-    for filename in file_list:
-        parts = filename.split("_")
-        mouse_number = parts[0]
-        eye = parts[1]
-        location = parts[2]
-
-        group_key = (mouse_number, eye, location)
-        if group_key not in groups:
-            groups[group_key] = []
-        groups[group_key].append(filename)
-
-
-    horizontal_only_radial_images = []
-    vertical_only_radial_images = []
-    both_radial_images = []
-    delete_radial_images = []
-
-    horizontal_key = {}
-    vertical_key = {}
-    both_key = {}
-
-    for i, location in enumerate(image_location_list):
-        if scan_modes[i] == "radial":
-            if horizontal_image_list[i] == "" and vertical_image_list[i] != "":
-                vertical_only_radial_images.append(location)
-                vertical_key[location] = vertical_image_list[i]
-            elif vertical_image_list[i] == "" and horizontal_image_list[i] != "":
-                horizontal_only_radial_images.append(location)
-                horizontal_key[location] = horizontal_image_list[i]
-            elif horizontal_image_list[i] != "" and vertical_image_list != "":
-                both_radial_images.append(location)
-                both_key[location] = [horizontal_image_list[i], vertical_image_list[i]]
-            elif horizontal_image_list[i] == "" and vertical_image_list[i] == "":
-                delete_radial_images.append(location)
-
-
-    # Delete unnecessary files within each group
-    for group_files in groups.values():
-        # Determine the midpoint for the current group
-        image_numbers = [int(file.split("_")[3].split(".")[0]) for file in group_files]
-        midpoint = (max(image_numbers) + 1) // 2
-
-        if len(group_files) > 0 and group_files[0].split("_")[2] in delete_radial_images:
-            for file in group_files:
-                file_path = os.path.join(directory_path, file)
-                os.remove(file_path)
-
-        # Delete files with image numbers less than the midpoint (deleting the horizontal images)
-        if len(group_files) > 0 and group_files[0].split("_")[2] in vertical_only_radial_images:
-            location = group_files[0].split("_")[2]
-            for file in group_files:
-                image_number = int(file.split("_")[3].split(".")[0])
-                if image_number < midpoint:
-                    file_path = os.path.join(directory_path, file)
-                    os.remove(file_path)
-                else:
-                    new_name = file.replace(location, vertical_key[location])
-                    new_path = os.path.join(directory_path, new_name)
-                    os.rename(os.path.join(directory_path, file), new_path)
-
-        # Delete files with image numbers greater than the midpoint (deleting the vertical images)
-            # This only matters for radial images so if the user wants this they should just take linear images instead of taking radial and then deleting half of the image
-        if len(group_files) > 0 and group_files[0].split("_")[2] in horizontal_only_radial_images:
-            location = group_files[0].split("_")[2]
-            print("horizontal:", midpoint)
-            for file in group_files:
-                image_number = int(file.split("_")[3].split(".")[0])
-                if image_number >= midpoint:
-                    file_path = os.path.join(directory_path, file)
-                    os.remove(file_path)
-                else:
-                    new_name = file.replace(location, horizontal_key[location])
-                    new_path = os.path.join(directory_path, new_name)
-                    os.rename(os.path.join(directory_path, file), new_path)
-
-        # Rename files if location is using both horizontal and vertical images
-        for location in both_radial_images:
-            if len(group_files) > 0 and group_files[0].split("_")[2] == location:
-                for i, file in enumerate(group_files):
-                    if i < midpoint:
-                        new_name = file.replace(location, both_key[location][0])
-                    else:
-                        new_name = file.replace(location, both_key[location][1])
-
-                    new_path = os.path.join(directory_path, new_name)
-                    os.rename(os.path.join(directory_path, file), new_path)
-
-
-# Initiating edit_and_delete_sequence_images()
-edit_and_delete_sequence_images(individual_sequence_images_directory)
-print("Deleted unneeded files and renamed radial files")
-
 
 
 
@@ -1574,7 +1541,7 @@ def averaging_images(directory_path, image_directory):
         mm_depth = micron_depth / 1000
         mmdepth_text = f"{mm_depth:.3f}".rstrip('0').rstrip('.') + "mmdepth"     # Reports up to 3 decimal places in name
 
-        file_name = group_files[0][:-6] + mmdepth_text + ".tif"
+        file_name = group_files[0][:-8] + mmdepth_text + ".tif"
         new_path = os.path.join(averaged_images_directory, file_name)
 
         time.sleep(0.5)

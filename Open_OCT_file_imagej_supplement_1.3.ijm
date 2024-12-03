@@ -143,7 +143,7 @@ macro "Convert OCT and crop [a]" {
 
 
     saveAs("Tiff", saveLocation);
-    run("Image Sequence... ", "dir=&individual_sequence_images format=TIFF digits=2");  //saving the individual files
+    run("Image Sequence... ", "dir=&individual_sequence_images format=TIFF digits=4");  //saving the individual files
     close("*");
 
     print("\\Update0:Converting OCT files to TIF files: " + i+1 + "/" + image_file_lines.length);
