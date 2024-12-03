@@ -1,4 +1,4 @@
-#Open_OCT_file_2.2.1.py
+#Open_OCT_file_2.2.2.py
 #Converting OCT files to tif and avi files
 #Made by Brandon Anderson, University of Pennsylvania
 
@@ -15,8 +15,9 @@ import shutil       # For deleting directories
 import pygetwindow as gw    #for making ImageJ an active window
 import tkinter as tk    # For making dialog boxes
 import tkinter.messagebox as messagebox
-from tkinter import ttk, filedialog, messagebox
+from tkinter import ttk, filedialog, messagebox, simpledialog
 import inspect      # For error messages
+import ast          # For converting variables in text file to proper variable formats
 
 # You will need to make sure to download psutil, pyautogui, and pygetwindow as they don't come with base Python
 
@@ -136,53 +137,25 @@ def retrieve_variables(preferences_variables, key):
     try:
         return preferences_variables[key]
     except KeyError:        # If these variables don't exist in the document, here are the defaults
-        if key == "image_location_list":
-            return ["central", "temporal", "nasal", "superior", "inferior"]
-        elif key == "od_before_os":
-            return True
-        elif key == "scan_modes":
-            return ['radial', 'linear', 'linear', 'radial', 'radial']
-        # Update: change peripheral folder checkbox to entry box
-        elif key == "subfolder_entry":
-            return [False, True, True, True, True]
-        # Update: change peripheral folder checkbox to entry box
-        elif key == "subfolder_name":
-            return "Peripheral images"
-        elif key == "unaveraged_images":
-            return False
-        elif key == "min_contrast":
-            return "25"
-        elif key == "max_contrast":
-            return "215"
-        elif key == "crop_amount":
-            return "480"
-
-        
-
-
-image_location_list = retrieve_variables(preferences_variables, 'image_location_list')
-od_before_os = retrieve_variables(preferences_variables, 'od_before_os')
-scan_modes = retrieve_variables(preferences_variables, 'scan_modes')
-subfolder_entry = retrieve_variables(preferences_variables, 'subfolder_entry')
-subfolder_name = retrieve_variables(preferences_variables, 'subfolder_name')
-unaveraged_images = retrieve_variables(preferences_variables, 'unaveraged_images')
-min_contrast = retrieve_variables(preferences_variables, 'min_contrast')
-max_contrast = retrieve_variables(preferences_variables, 'max_contrast')
-crop_amount = retrieve_variables(preferences_variables, "crop_amount")
+        if key == "preset_options_dict":
+            return {"Previous settings": {"default_locations": ["horizontal, vertical", "temporal", "nasal", "delete, superior", "delete, inferior"], "default_scan_type": ["radial", "linear", "linear", "radial", "radial"], "default_subfolder": [False, True, True, True, True], "default_min_contrast": 25, "default_max_contrast": 215, "default_crop_amount": 480, "default_subfolder_name": "Peripheral images", "od_os_checkbox_boolean": True, "imagej_checkbox_boolean": False, "unaveraged_checkbox_boolean": False}}
 
 
 
-# Converting str to whatever it actually is, since only strings come from the txt file
-if type(image_location_list) == str:
-    image_location_list = eval(image_location_list)
-if type(od_before_os) == str:
-    od_before_os = eval(od_before_os)
-if type(unaveraged_images) == str:
-    unaveraged_images = eval(unaveraged_images)
-if type(scan_modes) == str:
-    scan_modes = eval(scan_modes)
-if type(subfolder_entry) == str:
-    subfolder_entry = eval(subfolder_entry)
+preset_options_dict = retrieve_variables(preferences_variables, 'preset_options_dict')
+if type(preset_options_dict) == str:
+    preset_options_dict = ast.literal_eval(preset_options_dict)
+
+
+image_location_list = preset_options_dict["Previous settings"]["default_locations"]
+od_before_os = preset_options_dict["Previous settings"]["od_os_checkbox_boolean"]
+scan_modes = preset_options_dict["Previous settings"]["default_scan_type"]
+subfolder_entry = preset_options_dict["Previous settings"]["default_subfolder"]
+subfolder_name = preset_options_dict["Previous settings"]["default_subfolder_name"]
+unaveraged_images = preset_options_dict["Previous settings"]["unaveraged_checkbox_boolean"]
+min_contrast = preset_options_dict["Previous settings"]["default_min_contrast"]
+max_contrast = preset_options_dict["Previous settings"]["default_max_contrast"]
+crop_amount = preset_options_dict["Previous settings"]["default_crop_amount"]
 
 
 
@@ -279,33 +252,33 @@ def first_dialog_box():
         volume_vars[index].set(True)
 
 
-
-    def restore_defaults():
+    def set_new_preset(preset_option):
         # Update: custom defaults - need to define at function that sees user settings (much earlier in code)
-        default_values = ["central", "temporal", "nasal", "superior", "inferior"]
-        default_scan_type = ["radial", "linear", "linear", "radial", "radial"]
-        default_subfolder = [False, True, True, True, True]
-        default_min_contrast = 25   # Update: other - need to define this at beginning
-        default_max_contrast = 215  # Update: other - need to define this at beginning
-        default_crop_amount = 480  # Update: other - need to define this at beginning
-        default_subfolder_name = "Peripheral images"
-        current_row_count = len(entry_rows)
-        od_os_checkbox_boolean = True
-        imagej_checkbox_boolean = False
-        unaveraged_checkbox_boolean = False
+        default_locations = preset_options_dict[preset_option]["default_locations"]
+        default_scan_type = preset_options_dict[preset_option]["default_scan_type"]
+        default_subfolder = preset_options_dict[preset_option]["default_subfolder"]
+        default_min_contrast = preset_options_dict[preset_option]["default_min_contrast"]
+        default_max_contrast = preset_options_dict[preset_option]["default_max_contrast"]
+        default_crop_amount = preset_options_dict[preset_option]["default_crop_amount"]
+        default_subfolder_name = preset_options_dict[preset_option]["default_subfolder_name"]
+        od_os_checkbox_boolean = preset_options_dict[preset_option]["od_os_checkbox_boolean"]
+        imagej_checkbox_boolean = preset_options_dict[preset_option]["imagej_checkbox_boolean"]
+        unaveraged_checkbox_boolean = preset_options_dict[preset_option]["unaveraged_checkbox_boolean"]
 
+        current_row_count = len(entry_rows)
+        
         # If the current number of rows is less than five, add new rows
-        while current_row_count < 5:
+        while current_row_count < len(default_locations):
             add_entry_row()
             current_row_count += 1
 
         # If the current number of rows is more than five, remove excess rows
-        while current_row_count > 5:
+        while current_row_count > len(default_locations):
             remove_entry_row()
             current_row_count -= 1
 
         # Update the content of the first column with default values
-        for i, default_value in enumerate(default_values):
+        for i, default_value in enumerate(default_locations):
             entry_row = entry_rows[i]
             entry_row.delete(0, tk.END)  # Clear the current content
             entry_row.insert(tk.END, default_value)  # Set the default value
@@ -342,6 +315,113 @@ def first_dialog_box():
         crop_amount_entry.delete(0, tk.END)
         crop_amount_entry.insert(0, default_crop_amount)
 
+    def update_dropdown(new_selected_preset):
+        # Update the preset dropdown menu to reflect changes in preset_options_dict when a new preset is created or deleted
+        menu = preset_options_dropdown_menu['menu']
+        menu.delete(0, 'end')  # Clear the existing menu options
+
+        # Add updated options from preset_options_dict
+        for option in preset_options_dict.keys():
+            menu.add_command(
+                label=option,
+                command=lambda value=option: (selected_preset.set(value), set_new_preset(value))
+            )
+
+        # Update the displayed value
+        selected_preset.set(new_selected_preset)
+
+
+    def create_new_preset():
+        # Gets the current information
+        image_location_list = []
+        scan_modes = []
+        subfolder_entry = []
+
+        for i, entry_row in enumerate(entry_rows):
+            text = entry_row.get()
+            if text:
+                image_location_list.append(text)
+
+            if linear_vars[i].get():
+                scan_modes.append("linear")
+            elif radial_vars[i].get():
+                scan_modes.append("radial")
+            elif volume_vars[i].get():
+                scan_modes.append("volume")
+            else:
+                scan_modes.append("")
+
+            subfolder_entry.append(subfolder_vars[i].get())
+
+        od_before_os = od_os_checkbox_var.get()
+        subfolder_name = subfolder_name_entry.get()
+        unaveraged_images = unaveraged_checkbox_var.get()
+        min_contrast = min_contrast_var.get()
+        max_contrast = max_contrast_var.get()
+        crop_amount = crop_amount_var.get()
+
+        # Asks the user to give the preset a new name
+        new_preset_name = simpledialog.askstring("Preset", "New preset name:")
+
+        if new_preset_name:
+            new_preset_details = {
+                "default_locations": image_location_list,
+                "default_scan_type": scan_modes,
+                "default_subfolder": subfolder_entry,
+                "default_min_contrast": min_contrast,
+                "default_max_contrast": max_contrast,
+                "default_crop_amount": crop_amount,
+                "default_subfolder_name": subfolder_name,
+                "od_os_checkbox_boolean": od_before_os,
+                "imagej_checkbox_boolean": False,
+                "unaveraged_checkbox_boolean": unaveraged_images
+            }
+            preset_options_dict[new_preset_name] = new_preset_details
+            
+            # Read the preference txt file and replace the line
+            with open(preference_file, 'r') as file:
+                lines = file.readlines()
+
+            # Replace the preset_options_dict line
+            for i, line in enumerate(lines):
+                if line.strip().startswith("preset_options_dict"):
+                    lines[i] = f"preset_options_dict = {preset_options_dict}" + "\n"
+                    break
+
+            # Write the modified lines back to the file
+            with open(preference_file, 'w') as file:
+                file.writelines(lines)
+
+            # Update the dropdown menu with the new preset
+            update_dropdown(new_preset_name)
+
+            print(f"Created {new_preset_name}")
+
+
+            
+    def delete_preset():
+        current_preset = selected_preset.get()
+        if current_preset != "Previous settings":
+            del preset_options_dict[current_preset]
+
+            # Read the preference txt file and replace the line
+            with open(preference_file, 'r') as file:
+                lines = file.readlines()
+
+            # Replace the preset_options_dict line
+            for i, line in enumerate(lines):
+                if line.strip().startswith("preset_options_dict"):
+                    lines[i] = f"preset_options_dict = {preset_options_dict}" + "\n"
+                    break
+
+            # Write the modified lines back to the file
+            with open(preference_file, 'w') as file:
+                file.writelines(lines)
+
+            # Update the dropdown menu with the new preset
+            update_dropdown("")
+
+            print(f"Deleted {current_preset}")
 
     def confirm(event=None):
         global image_location_list, od_before_os, scan_modes, subfolder_entry, subfolder_name, unaveraged_images, min_contrast, max_contrast, crop_amount
@@ -383,11 +463,25 @@ def first_dialog_box():
         window.master.destroy()
 
 
+
+        preset_options_dict["Previous settings"]["default_locations"] = image_location_list
+        preset_options_dict["Previous settings"]["default_scan_type"] = scan_modes
+        preset_options_dict["Previous settings"]["default_subfolder"] = subfolder_entry
+        preset_options_dict["Previous settings"]["default_min_contrast"] = min_contrast
+        preset_options_dict["Previous settings"]["default_max_contrast"] = max_contrast
+        preset_options_dict["Previous settings"]["default_crop_amount"] = crop_amount
+        preset_options_dict["Previous settings"]["default_subfolder_name"] = subfolder_name
+        preset_options_dict["Previous settings"]["od_os_checkbox_boolean"] = od_before_os
+        preset_options_dict["Previous settings"]["imagej_checkbox_boolean"] = False
+        preset_options_dict["Previous settings"]["unaveraged_checkbox_boolean"] = unaveraged_images
+
+
         # Removing variables that will be replaced
         with open(preference_file, 'r') as file:
             file_content = file.read()
         file_content = file_content.replace("\n\n\n", "\n") # Making sure we're not just adding a ton of extra lines over time
         variables_to_replace = [
+            "preset_options_dict",
             "image_location_list",
             "od_before_os",
             "scan_modes",
@@ -398,28 +492,20 @@ def first_dialog_box():
             "max_contrast",
             "crop_amount",
         ]
-        lines = [line for line in file_content.splitlines() if not any(line.startswith(variable) for variable in variables_to_replace)]
+        lines_not_to_be_replaced = [line for line in file_content.splitlines() if not any(line.startswith(variable) for variable in variables_to_replace)]
         if imageJ_location_reenter == True:
             # Update: extra options dialog box - probably move this to wherever it is
             shortened_lines = []
-            for i in lines:
+            for i in lines_not_to_be_replaced:
                 if not (i.startswith("screenshot_directory") or i.startswith("macro_location") or i.startswith("imagej_location")):
                     shortened_lines.append(i)
-            lines = shortened_lines
+            lines_not_to_be_replaced = shortened_lines
 
         # Saving the user's inputs for future uses
         with open(preference_file, 'w') as file:
-            file.write('\n'.join(lines))
-            file.write(f"\nimage_location_list = {image_location_list}")
-            file.write(f"\nod_before_os = {od_before_os}")
-            file.write(f"\nscan_modes = {scan_modes}")
-            # Update: change peripheral folder checkbox to entry box - next two lines
-            file.write(f"\nsubfolder_entry = {subfolder_entry}")
-            file.write(f"\nsubfolder_name = {subfolder_name}")
-            file.write(f"\nunaveraged_images = {unaveraged_images}")
-            file.write(f"\nmin_contrast = {min_contrast}")
-            file.write(f"\nmax_contrast = {max_contrast}")
-            file.write(f"\ncrop_amount = {crop_amount}")
+            file.write('\n'.join(lines_not_to_be_replaced))
+            file.write(f"\npreset_options_dict = {preset_options_dict}")
+
 
 
     def on_dialog_close(event=None):
@@ -432,7 +518,8 @@ def first_dialog_box():
     window.title("Image settings")
     window.protocol("WM_DELETE_WINDOW", on_dialog_close)
 
-    instructions_label = tk.Label(window, text="Please enter the order that the images were taken in and what scan mode was used. If radial\nscans were used, record what the horizontal and vertical images represent. If this is not\nprovided for the radial images, then the image will not be processed. These will be used for the\nfile name.", justify='left')
+    instruction_text = "Please enter the order that the images were taken in and what scan mode was used. These will be used for the file name. If you enter 'delete' for any location those images will be deleted. If radial scans are used, in the location box separate out the different images with a comma and space (i.e. angle0, angle90)."
+    instructions_label = tk.Label(window, text= instruction_text, wraplength=475, justify='left')
     instructions_label.grid(padx=10, sticky='w')
 
     dialog_frame = tk.Frame(window)
@@ -472,29 +559,35 @@ def first_dialog_box():
         entry_row = entry_rows[-1]
         entry_row.insert(tk.END, location)
 
-        row_num += 1
 
 
+
+    row_num += 1
     button_frame = tk.Frame(window)
-    button_frame.grid()
+    button_frame.grid(row=row_num)
     add_button = tk.Button(button_frame, text="+", command=add_entry_row)
     add_button.pack(side='right')
     remove_button = tk.Button(button_frame, text="-", command=remove_entry_row)
     remove_button.pack(side='left')
+    row_num += 1
 
 
     od_os_checkbox_var = tk.BooleanVar(value=od_before_os)
     od_os_checkbox = tk.Checkbutton(window, text="OD eyes were imaged before OS eyes", variable=od_os_checkbox_var)
-    od_os_checkbox.grid(padx=10, sticky='w')
+    od_os_checkbox.grid(row=row_num, padx=10, sticky='w')
+    row_num += 1
 
     # Update: custom defaults - make this part of a separate dialog box (or honestly make it a button)
     imagej_checkbox_var = tk.BooleanVar(value=False)
     imagej_checkbox = tk.Checkbutton(window, text="Re-enter ImageJ file location", variable=imagej_checkbox_var)
     imagej_checkbox.grid(padx=10, sticky='w')
+    row_num += 1
 
     unaveraged_checkbox_var = tk.BooleanVar(value=unaveraged_images)
     unaveraged_checkbox = tk.Checkbutton(window, text="Save a copy of the unaveraged images", variable=unaveraged_checkbox_var)
-    unaveraged_checkbox.grid(padx=10, sticky='w')
+    unaveraged_checkbox.grid(row=row_num, padx=10, sticky='w')
+    row_num += 1
+    
 
     # Getting user input on subfolder name
     # Update: change peripheral folder checkbox to entry box - replace with text that says how many subfolders will be made
@@ -536,16 +629,34 @@ def first_dialog_box():
     crop_unit_label = tk.Label(crop_amount_frame, text="µm")
     crop_unit_label.grid(row=0, column=2)
     row_num += 1
-    
 
-    # Creating "Restore defaults" and "Confirm" buttons at the bottom of the screen
+    # Creating preset setting dropdown menu
+    presets_frame = tk.Frame(window)
+    presets_frame.grid(row=row_num, column=0, sticky='w', padx=10)
+    preset_label = tk.Label(presets_frame, text = "Preset options: ")
+    preset_label.grid(row=0, column=0)
+    selected_preset = tk.StringVar(value="Previous settings")
+    preset_options_dropdown_menu = ttk.OptionMenu(
+        presets_frame,
+        selected_preset,
+        selected_preset.get(),
+        *preset_options_dict.keys(),
+        command=lambda _: set_new_preset(selected_preset.get())
+    )
+    preset_options_dropdown_menu.grid(row=0, column=1)
+    create_preset_button = tk.Button(presets_frame, text="Create preset", command=create_new_preset)
+    create_preset_button.grid(row=0, column=2)
+    delete_preset_button = tk.Button(presets_frame, text="Delete preset", command=delete_preset)
+    delete_preset_button.grid(row=0, column=3)
+
+
+    # Creating "Confirm" button at the bottom of the screen
     # Update: custom defaults - include button "Options"
     button_frame = tk.Frame(window)
     button_frame.grid()
-    restore_button = tk.Button(button_frame, text="Restore defaults", command=restore_defaults)
-    restore_button.pack(side='left', pady=10)
     confirm_button = tk.Button(button_frame, text="Confirm", command=confirm)
-    confirm_button.pack(side='right', pady=10, padx=10)
+    confirm_button.pack(pady=10, padx=10)
+
 
 
     window.bind("<Escape>", on_dialog_close)
@@ -1128,8 +1239,11 @@ wait_to_appear(os.path.join(screenshot_directory, "select_the_location_of_the_im
 
 pyautogui.typewrite(image_directory, interval=0.01)
 pyautogui.press('enter')
-time.sleep(0.5)
+time.sleep(2)
 
+
+# Making sure ImageJ is the active program still
+is_imagej_running()
 
 # Press 'a' key to trigger the ImageJ macro that converts OCT images to TIF images
 print("Sending command to ImageJ to convert OCT files")
