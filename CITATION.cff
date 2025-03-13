@@ -1,0 +1,11 @@
+cff-version: 1.2.0
+message: "If you use this software for any publications, please cite it as below."
+authors:
+- family-names: "Anderson"
+  given-names: "Brandon"
+  orcid: "https://orcid.org/0000-0001-6502-9216"
+title: "Converting OCT files to TIF and AVI"
+version: 2.3.0
+doi: 
+date-released: 2025-03-13
+url: "https://github.com/banderson314/Convert_OCT_files_to_TIF"

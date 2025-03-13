@@ -1,10 +1,10 @@
-#Open_OCT_file_2.2.2.py
-#Converting OCT files to tif and avi files
-#Made by Brandon Anderson, University of Pennsylvania
+# convert_OCT_files.py
+# Converting OCT files to tif and avi files
+# Made by Brandon Anderson, University of Pennsylvania
 
-#For this macro to work, you need the following files:
-#OCT reader plugin - ImageJ macro
-#OCT averager plugin - ImageJ macro
+# For this macro to work, you need the following files:
+# OCT reader plugin - ImageJ macro
+# OCT averager plugin - ImageJ macro
 
 import os
 import psutil       # For opening ImageJ
@@ -18,10 +18,13 @@ import tkinter.messagebox as messagebox
 from tkinter import ttk, filedialog, messagebox, simpledialog
 import inspect      # For error messages
 import ast          # For converting variables in text file to proper variable formats
+import sys          # For exiting dialog boxes
+import pyscreeze
+pyscreeze.USE_IMAGE_NOT_FOUND_EXCEPTION = False
 
 # You will need to make sure to download psutil, pyautogui, and pygetwindow as they don't come with base Python
 
-
+confidence = 0.95
 # For updates, look for # Update:
 # Update: volume scan
 # Update: change peripheral folder checkbox to entry box
@@ -64,7 +67,7 @@ def show_error_message(message, root=None):
 def wait_to_appear(image_file, max_wait_time):      # This looks for dialog boxes or buttons to appear, and won't let the script continue until it is found or if the time reaches the max wait time
     search_start_time = time.time()
     while time.time() - search_start_time < max_wait_time:
-        if pyautogui.locateOnScreen(image_file):
+        if pyautogui.locateOnScreen(image_file, confidence=confidence):
             time.sleep(0.5)
             return True
         time.sleep(0.5)
@@ -397,8 +400,6 @@ def first_dialog_box():
 
             print(f"Created {new_preset_name}")
 
-
-            
     def delete_preset():
         current_preset = selected_preset.get()
         if current_preset != "Previous settings":
@@ -462,8 +463,6 @@ def first_dialog_box():
         window.destroy()
         window.master.destroy()
 
-
-
         preset_options_dict["Previous settings"]["default_locations"] = image_location_list
         preset_options_dict["Previous settings"]["default_scan_type"] = scan_modes
         preset_options_dict["Previous settings"]["default_subfolder"] = subfolder_entry
@@ -474,7 +473,6 @@ def first_dialog_box():
         preset_options_dict["Previous settings"]["od_os_checkbox_boolean"] = od_before_os
         preset_options_dict["Previous settings"]["imagej_checkbox_boolean"] = False
         preset_options_dict["Previous settings"]["unaveraged_checkbox_boolean"] = unaveraged_images
-
 
         # Removing variables that will be replaced
         with open(preference_file, 'r') as file:
@@ -518,7 +516,7 @@ def first_dialog_box():
     window.title("Image settings")
     window.protocol("WM_DELETE_WINDOW", on_dialog_close)
 
-    instruction_text = "Please enter the order that the images were taken in and what scan mode was used. These will be used for the file name. If you enter 'delete' for any location those images will be deleted. If radial scans are used, in the location box separate out the different images with a comma and space (i.e. angle0, angle90)."
+    instruction_text = "Please enter the order that the images were taken in and what scan mode was used. These will be used for the file name. If you enter 'delete' for any location those images will be deleted. If radial scans are used, in the location box separate out the different images with a comma and space (i.e. angle0, angle90). The 'linear' mode also works for annular scans."
     instructions_label = tk.Label(window, text= instruction_text, wraplength=475, justify='left')
     instructions_label.grid(padx=10, sticky='w')
 
@@ -710,7 +708,7 @@ for i, image_type in enumerate(image_location_list):
 root = tk.Tk()
 root.withdraw()  # Hide the root window
 
-# Prompt the user to select a directory using a dialog
+# Prompt the user to select a directory
 image_directory = filedialog.askdirectory()
 
 # Check if the user selected a directory or canceled the dialog
@@ -750,15 +748,76 @@ with open(imagej_settings_file, "w") as file:
 fileNames = [file for file in os.listdir(image_directory) if os.path.isfile(os.path.join(image_directory, file))]
 
 # Update: volume scan - removed <and name.split("_")[2] != "V">
-filteredFiles = [name for name in fileNames if name.endswith(".OCT") and "RegAvg" not in name]  #Removing any files that contain "RegAvg" and aren't .OCT
+filtered_files = [name for name in fileNames if name.endswith(".OCT") and "RegAvg" not in name]  #Removing any files that contain "RegAvg" and aren't .OCT
 
-# Checking to make sure all images are from the same date and experiment
-# Update: handle multiple experiments from one date
-experiment_date = filteredFiles[0].split("_")[0]
-for file_name in filteredFiles:
-    if file_name.split("_")[0] != experiment_date:
-        messagebox.showerror("Error", "You must only use images from one date.\n\nIf multiple experiments were done on that date, you can only process one experiment at a time.\n\nYour image files start with the date followed by a number (e.g. 2023-05-08-001). The number and date has to be the same for all files.")
+
+# Determining which experiment to convert from that day
+def user_selects_what_experiment_to_process(list_of_options):
+    def on_confirm(event=None):
+        nonlocal selected_option
+        selected_option = options_var.get()
+        window.destroy()
+    
+    def on_dialog_close(event=None):
+        nonlocal selected_option
+        selected_option = None
+        window.destroy()
+
+    window = tk.Toplevel()
+    window.title("Experiment Selection")
+    window.protocol("WM_DELETE_WINDOW", on_dialog_close)
+    window.bind("<Escape>", on_dialog_close)
+    window.bind("<Return>", on_confirm)
+    
+      
+    # Instructions label
+    instructions = tk.Label(window, text="Please select an experiment to process:")
+    instructions.pack(pady=10)
+    
+    # Variable to store the selected option
+    options_var = tk.StringVar(value=list_of_options[0])  # Default selection
+    selected_option = list_of_options[0]  # Initialize selected option
+            
+    # Create radio buttons for each option
+    for option in list_of_options:
+        rb = tk.Radiobutton(window, text=option, variable=options_var, value=option)
+        rb.pack(anchor="w")
+    
+    # Confirm button
+    confirm_button = ttk.Button(window, text="Confirm", command=on_confirm)
+    confirm_button.pack(pady=10)
+    
+
+    # Center the window on the screen
+    center_dialog_box(window)
+
+    window.wait_window()  # Wait for the window to close
+    
+    return selected_option
+
+# If there are several different experiments for the date, user needs to select which one to run
+experiment_list = []
+selected_experiment = filtered_files[0].split("_")[0]
+for file_name in filtered_files:
+    date_and_experiment = file_name.split("_")[0]
+    if date_and_experiment not in experiment_list:
+        experiment_list.append(date_and_experiment)
+
+if len(experiment_list) > 1:
+    selected_experiment = user_selects_what_experiment_to_process(experiment_list)
+    if selected_experiment is None:
+        print("No option selected. Shutting down program.")
         exit()
+
+
+    temp_list = []    
+    for file_name in filtered_files:
+        if file_name.split("_")[0] == selected_experiment:
+            temp_list.append(file_name)
+    filtered_files = temp_list
+
+
+
 
 # Extracting info from the file names
 annotated_list = [
@@ -768,13 +827,13 @@ annotated_list = [
         file_name.split("_")[2],  # Extract the image type ("L", "R", or "V")
         int(file_name.split("_")[-1].split(".")[0])  # Extract the identifying number
     ]
-    for file_name in filteredFiles
+    for file_name in filtered_files
 ]
 # Format: [file name, eye, image type, identifying number]
 for sublist in annotated_list:   #interpreting what the image type is
     if sublist[2] == "R":
         sublist[2] = "radial"
-    elif sublist[2] == "L":
+    elif sublist[2] == "L" or "A":
         sublist[2] = "linear"
     elif sublist[2] == "V":
         sublist[2] = "volume"
@@ -815,10 +874,10 @@ for sublist in annotated_list:
 
 
 
-#Figuring out how many images each mouse/eye has
-#annotated_list format: [0 file name, 1 eye, 2 image type, 3 ID number, 4 arbitrary mouse number]
-#Making a new list to define each eye image
-#eye_images_list format: [0 mouse, 1 eye, 2 image locations]
+# Figuring out how many images each mouse/eye has
+# annotated_list format: [0 file name, 1 eye, 2 image type, 3 ID number, 4 arbitrary mouse number]
+# Making a new list to define each eye image
+# eye_images_list format: [0 mouse, 1 eye, 2 image locations]
 eye_images_list = []
 
 location_mapping = {image_location: image_location[0].upper() for image_location in image_location_list}
@@ -881,14 +940,16 @@ def create_mouse_number_dialog_box():
     dialog_frame = ttk.Frame(window)
     dialog_frame.pack(padx=10, pady=10)
 
-    ttk.Label(dialog_frame, text=" ").grid(row=1, column=0, padx=5)
-    ttk.Label(dialog_frame, text="Mouse").grid(row=1, column=1, padx=5)
-    ttk.Label(dialog_frame, text="OD").grid(row=1, column=2, padx=5)
-    ttk.Label(dialog_frame, text="OS").grid(row=1, column=3, padx=5)
+
 
     # Add instructions label
     instructions_label = ttk.Label(dialog_frame, text="OD and OS columns signify what images the\nprogram thinks you have. If wrong, click Edit\nto manually adjust.")
     instructions_label.grid(row=0, column=0, columnspan=4, padx=5, pady=5, sticky="w")
+
+    ttk.Label(dialog_frame, text=" ").grid(row=1, column=0, padx=5)
+    ttk.Label(dialog_frame, text="Mouse").grid(row=1, column=1, padx=5)
+    ttk.Label(dialog_frame, text="OD").grid(row=1, column=2, padx=5)
+    ttk.Label(dialog_frame, text="OS").grid(row=1, column=3, padx=5)
 
     definition_of_acronymns = "\n".join([f"{value} = {key}" for key, value in location_mapping.items()])
     instructions_label2 = ttk.Label(dialog_frame, text=definition_of_acronymns)
@@ -1057,7 +1118,7 @@ def create_individual_dialog_box(annotated_list):
     window.master.attributes("-alpha", 0)  # Set window opacity to 0 to make it invisible
 
     # Center the window on the screen
-    window.after(10, lambda: center_dialog_box(window))
+    window.after(1, lambda: center_dialog_box(window))
 
     window.mainloop()
 
@@ -1172,7 +1233,7 @@ def is_imagej_logo_visible():
     logo_path = os.path.join(screenshot_directory, "ImageJ_logo.png")
 
     if os.path.exists(logo_path):
-        logo_location = pyautogui.locateOnScreen(logo_path)
+        logo_location = pyautogui.locateOnScreen(logo_path, confidence=confidence)
         return logo_location is not None
 
     return False
@@ -1200,7 +1261,7 @@ else:
 #Installing the needed macros
 
 def click_on_image_center(image_path):
-    image_location = pyautogui.locateOnScreen(image_path)
+    image_location = pyautogui.locateOnScreen(image_path, confidence=confidence)
     if image_location:
         center_x, center_y = pyautogui.center(image_location)
         pyautogui.click(center_x, center_y)
@@ -1427,9 +1488,9 @@ def averaging_images(directory_path, image_directory):
         oct_volume_averager_text_alternate = os.path.join(screenshot_directory, "OCT_volume_averager2.png")
         search_start_time = time.time()
         while time.time() - search_start_time < 20:
-            averager_text_location = pyautogui.locateOnScreen(oct_volume_averager_text)
+            averager_text_location = pyautogui.locateOnScreen(oct_volume_averager_text, confidence=confidence)
             if averager_text_location is None:
-                averager_text_location = pyautogui.locateOnScreen(oct_volume_averager_text_alternate)
+                averager_text_location = pyautogui.locateOnScreen(oct_volume_averager_text_alternate, confidence=confidence)
                 if averager_text_location is not None:
                     pyautogui.click(centerOfButton(averager_text_location))
 
@@ -1455,21 +1516,21 @@ def averaging_images(directory_path, image_directory):
 
             # Checking to make sure the correct settings are selected
             # Checking and potentially changing the read setting
-            read_setting_loation = pyautogui.locateOnScreen(os.path.join(screenshot_directory, "correct_read_setting.png")) or pyautogui.locateOnScreen(os.path.join(screenshot_directory, "correct_read_setting2.png"))
-            if read_setting_loation is None:
-                read_setting_loation = pyautogui.locateOnScreen(os.path.join(screenshot_directory, "incorrect_read_setting.png")) or pyautogui.locateOnScreen(os.path.join(screenshot_directory, "incorrect_read_setting2.png"))
-                if read_setting_loation is None:
+            read_setting_location = pyautogui.locateOnScreen(os.path.join(screenshot_directory, "correct_read_setting.png"), confidence=confidence) or pyautogui.locateOnScreen(os.path.join(screenshot_directory, "correct_read_setting2.png"), confidence=confidence)
+            if read_setting_location is None:
+                read_setting_location = pyautogui.locateOnScreen(os.path.join(screenshot_directory, "incorrect_read_setting.png"), confidence=confidence) or pyautogui.locateOnScreen(os.path.join(screenshot_directory, "incorrect_read_setting2.png"), confidence=confidence)
+                if read_setting_location is None:
                     show_error_message("The script is unable to identify the read settings properly in the OCT Volume Averager box. Please select the correct setting before clicking okay.")
-                if read_setting_loation is not None:
-                    click_location = read_setting_loation.left + 10, read_setting_loation.top + 37
+                if read_setting_location is not None:
+                    click_location = read_setting_location.left + 10, read_setting_location.top + 37
                     pyautogui.click(click_location)
                     time.sleep(5)
 
 
             # Checking and potentially changing the save setting
-            save_setting_loation = pyautogui.locateOnScreen(os.path.join(screenshot_directory, "correct_save_setting.png")) or pyautogui.locateOnScreen(os.path.join(screenshot_directory, "correct_save_setting2.png"))
+            save_setting_loation = pyautogui.locateOnScreen(os.path.join(screenshot_directory, "correct_save_setting.png"), confidence=confidence) or pyautogui.locateOnScreen(os.path.join(screenshot_directory, "correct_save_setting2.png"), confidence=confidence)
             if save_setting_loation is None:
-                save_setting_loation = pyautogui.locateOnScreen(os.path.join(screenshot_directory, "incorrect_save_setting.png")) or pyautogui.locateOnScreen(os.path.join(screenshot_directory, "incorrect_save_setting2.png"))
+                save_setting_loation = pyautogui.locateOnScreen(os.path.join(screenshot_directory, "incorrect_save_setting.png"), confidence=confidence) or pyautogui.locateOnScreen(os.path.join(screenshot_directory, "incorrect_save_setting2.png"), confidence=confidence)
                 if save_setting_loation is None:
                     show_error_message("The script is unable to identify the save settings properly in the OCT Volume Averager box. Please select the correct setting before clicking okay.")
                 if save_setting_loation is not None:
@@ -1481,13 +1542,13 @@ def averaging_images(directory_path, image_directory):
             # Locating the "okay" button
             pyautogui.moveTo(screen_width/2, 0)
             time.sleep(0.1)
-            okay_button_location = pyautogui.locateOnScreen(os.path.join(screenshot_directory, "ok_button.png")) or pyautogui.locateOnScreen(os.path.join(screenshot_directory, "ok_button2.png"))
+            okay_button_location = pyautogui.locateOnScreen(os.path.join(screenshot_directory, "ok_button.png"), confidence=confidence) or pyautogui.locateOnScreen(os.path.join(screenshot_directory, "ok_button2.png"), confidence=confidence)
             if okay_button_location is None:
                 show_error_message("The script is unable to locate the 'okay' button, either because it is being obscured or the style of the button has changed. If the later is the case, please take a screenshot of the button and save it in the ImageJ_clicking_files folder as ok_button.png. The script will now shut down.")
 
 
             # Checking the Options box
-            options_box_loation = pyautogui.locateOnScreen(os.path.join(screenshot_directory, "correct_options_box_settings.png")) or pyautogui.locateOnScreen(os.path.join(screenshot_directory, "correct_options_box_settings2.png"))
+            options_box_loation = pyautogui.locateOnScreen(os.path.join(screenshot_directory, "correct_options_box_settings.png"), confidence=confidence) or pyautogui.locateOnScreen(os.path.join(screenshot_directory, "correct_options_box_settings2.png"), confidence=confidence)
             if options_box_loation is None:
                 show_error_message("Incorrect settings are selected\nPlease make the following changes as needed:\n\nUncheck 'Inverted Image Stack (EDI)'\nUncheck 'Keep Intermediate .tiff Files'\nSet the 'Number of Pixels to Crop' to 0 for both boxes\n\nAlternatively, something is covering part of the OCT Volume Averager dialog box and the script is unable to complete its confirmation that the proper settings are selected. Please make sure the dialog box is not partially hidden.\n\nAnother possibility is the style of the box has changed. In which case you would need to take a screenshot of it and save it as correct_options_box_settings.png in ImageJ_clicking_files.\n\nClick the okay button in this dialog box when you have made the changes.")
 
@@ -1496,13 +1557,13 @@ def averaging_images(directory_path, image_directory):
             averager_text_right_coordinate = averager_text_location.left + averager_text_location.width
             averager_text_bottom_coordinate = averager_text_location.top + averager_text_location.height
 
-            text_box_1 = averager_text_right_coordinate, averager_text_bottom_coordinate + 60
+            text_box_1 = read_setting_location.left + read_setting_location.width, read_setting_location.top + read_setting_location.height + 5
             pyautogui.click(text_box_1)
             pyautogui.hotkey('ctrl', 'a')
             pyautogui.typewrite(images_to_be_averaged_directory, interval=0.01)
             time.sleep(0.1)
 
-            text_box_2 = text_box_1 = averager_text_right_coordinate, averager_text_bottom_coordinate + 180
+            text_box_2 = save_setting_loation.left + save_setting_loation.width, save_setting_loation.top + save_setting_loation.height + 5
             pyautogui.click(text_box_2)
             pyautogui.hotkey('ctrl', 'a')
             pyautogui.typewrite(averaged_images_directory, interval=0.01)
@@ -1636,6 +1697,55 @@ if annotated_list_image_scans and unaveraged_images is True:
     restore_underscores(unaveraged_images_directory)
 
 
+# Combining converted files into one subdirectory
+def combining_directories(experiment):
+    final_directory_name = f"{experiment} OCT images"
+    final_directory_path = os.path.join(image_directory, final_directory_name)
+
+    # Create the subdirectory if it doesn't exist
+    if not os.path.exists(final_directory_path):
+        os.makedirs(final_directory_path)
+    else:
+        delete_directory(final_directory_path)
+        os.makedirs(final_directory_path)
+
+    directories_to_move = ["averaged_images", "unaveraged_images", "volume_scans"]
+
+    # Move each directory into the new subdirectory
+    for directory in directories_to_move:
+        source_directory = os.path.join(image_directory, directory)
+        destination_directory = os.path.join(final_directory_path, directory)
+
+        # Check if the source directory exists
+        if os.path.exists(source_directory):
+            shutil.move(source_directory, destination_directory)
+
+        # Deleting if nothing is in the directory
+        if os.path.isdir(destination_directory) and not os.listdir(destination_directory):
+            os.rmdir(destination_directory)
+    
+    # If there is only one subdirectory, move all its contents out to final_directory_path and delete the subdirectory
+    final_subdirectories_list = os.listdir(final_directory_path)
+    number_of_subdirectories = len(final_subdirectories_list)
+    
+    if number_of_subdirectories == 1:
+        only_subdirectory = final_subdirectories_list[0]
+        only_subdirectory_path = os.path.join(final_directory_path, only_subdirectory)
+
+        # Move all contents of the only_subdirectory to final_directory_path
+        for item in os.listdir(only_subdirectory_path):
+            item_path = os.path.join(only_subdirectory_path, item)
+            destination_path = os.path.join(final_directory_path, item)
+
+            # Move the item (file or subdirectory) to final_directory_path
+            shutil.move(item_path, destination_path)
+
+        # Delete the now-empty subdirectory
+        os.rmdir(only_subdirectory_path)
+    
+
+combining_directories(selected_experiment)
+
 # Deleting the intermediate directories
 delete_directory(individual_sequence_images_directory)
 delete_directory(cropped_tif_images_directory)
@@ -1652,3 +1762,5 @@ if os.path.isdir(averaged_images_directory) and not os.listdir(averaged_images_d
     os.rmdir(averaged_images_directory)
 if os.path.isdir(volume_scan_directory) and not os.listdir(volume_scan_directory):
     os.rmdir(volume_scan_directory)
+
+print("Complete")
