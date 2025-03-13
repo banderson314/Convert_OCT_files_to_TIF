@@ -466,8 +466,6 @@ macro "Open OCT files [a]" {
     //****************Finding the middle of the retina****************
     middleNumber = topIntensities.length / 2;   //This gives the median value, which works better than the mean
     middleOfRetina = topIntensities[middleNumber];
-    //Array.getStatistics(topIntensities, min, max, mean, std);  //This way would take the mean, but I don't think that works as well
-    //middleOfRetina = round(mean);
 
     //****************STOP OF FIGURING OUT WHERE THE RETINA IS****************
 
@@ -580,11 +578,3 @@ function deleteCreatedFiles (path) {
   }
 }
 
-macro "Delete created files [r]" {
-  deleteCreatedFiles("C:/Users/bran314/Desktop/124 OCT images/Temporary files/");
-  deleteCreatedFiles("C:/Users/bran314/Desktop/124 OCT images/Finished files/Peripheral images/");
-  deleteCreatedFiles("C:/Users/bran314/Desktop/124 OCT images/Finished files/Unaveraged images/");
-  deleteCreatedFiles("C:/Users/bran314/Desktop/124 OCT images/Finished files/");
-  deleteCreatedFiles("C:/Users/bran314/Desktop/124 OCT images/Temporary files - horizontal images/");
-  File.makeDirectory("C:/Users/bran314/Desktop/124 OCT images/Finished files/");
-}
