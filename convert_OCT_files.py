@@ -751,6 +751,7 @@ fileNames = [file for file in os.listdir(image_directory) if os.path.isfile(os.p
 filtered_files = [name for name in fileNames if name.endswith(".OCT") and "RegAvg" not in name]  #Removing any files that contain "RegAvg" and aren't .OCT
 
 
+
 # Determining which experiment to convert from that day
 def user_selects_what_experiment_to_process(list_of_options):
     def on_confirm(event=None):
@@ -818,7 +819,6 @@ if len(experiment_list) > 1:
 
 
 
-
 # Extracting info from the file names
 annotated_list = [
     [
@@ -829,16 +829,19 @@ annotated_list = [
     ]
     for file_name in filtered_files
 ]
+
+
 # Format: [file name, eye, image type, identifying number]
 for sublist in annotated_list:   #interpreting what the image type is
-    if sublist[2] == "R":
+    if sublist[2] == "R" or sublist[2] == "A":
         sublist[2] = "radial"
-    elif sublist[2] == "L" or "A":
+    elif sublist[2] == "L":
         sublist[2] = "linear"
     elif sublist[2] == "V":
         sublist[2] = "volume"
 
 annotated_list.sort(key=lambda x: x[3])  #sorting the list by ID number (and thus by time it was taken)
+
 
 #Assigning each mouse an arbitrary number assuming both eyes are imaged for every mouse
 mouseNumber = 1
