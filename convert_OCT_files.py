@@ -516,7 +516,7 @@ def first_dialog_box():
     window.title("Image settings")
     window.protocol("WM_DELETE_WINDOW", on_dialog_close)
 
-    instruction_text = "Please enter the order that the images were taken in and what scan mode was used. These will be used for the file name. If you enter 'delete' for any location those images will be deleted. If radial scans are used, in the location box separate out the different images with a comma and space (i.e. angle0, angle90). The 'linear' mode also works for annular scans."
+    instruction_text = "Please enter the order that the images were taken in and what scan mode was used. These will be used for the file name. If you enter 'delete' for any location those images will be deleted. If radial scans are used, in the location box separate out the different images with a comma and space (i.e. angle0, angle90)."
     instructions_label = tk.Label(window, text= instruction_text, wraplength=475, justify='left')
     instructions_label.grid(padx=10, sticky='w')
 
@@ -833,7 +833,7 @@ annotated_list = [
 
 # Format: [file name, eye, image type, identifying number]
 for sublist in annotated_list:   #interpreting what the image type is
-    if sublist[2] == "R" or sublist[2] == "A":
+    if sublist[2] == "R":
         sublist[2] = "radial"
     elif sublist[2] == "L":
         sublist[2] = "linear"
